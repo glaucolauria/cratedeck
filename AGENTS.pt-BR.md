@@ -16,7 +16,7 @@ tudo o que se diz nas suas issues e pull requests, é lido por estranhos:
 "Repositório público", abaixo, é uma restrição rígida.
 
 **Formato:** aplicação web. **Stack:** ainda não escolhida (abaixo).
-**Modelo de estágios:** um estágio, `main`. **Status:** pré-alfa, ainda sem
+**Modelo de estágios:** dois estágios, `dev` → `main`. **Status:** pré-alfa, ainda sem
 código do app.
 
 ## Antes de toda tarefa
@@ -76,20 +76,26 @@ push.
 
 ## Fluxo de estágios (restrição rígida)
 
-Um estágio, `main`. Um merge que incrementa a versão gera a release
-(`create_release.yml`); qualquer outro merge não gera release nenhuma.
+Dois estágios. A `dev`, branch padrão, é onde toda mudança entra; a
+`main` recebe só a promoção da `dev`. Um merge na `dev` não gera release;
+uma promoção que incrementa a versão gera (`create_release.yml`).
 
-1. Nunca faça push para a `main`. Só pull requests: o hook em
-   `.claude/settings.json` nega o push, e os rulesets o recusam para todos
-   (`docs/repository-settings.md`).
-2. Aprovação antes do merge. O merge é uma ação do mantenedor: um agente
-   nunca faz merge (`gh pr merge` é negado em `.claude/settings.json`).
-3. Incremente a versão na branch quando a mudança for relevante para uma
-   release (`release-management`).
-4. Mantenedores: as branches de tarefa entram por merge local em
-   `sprint/<topic>`, o gate roda uma vez ali, e um único pull request vai
-   para a `main`. Contribuidores: uma branch no próprio fork, um pull
-   request para a `main` (`git-workflow`).
+1. Nunca faça push para a `dev` nem para a `main`. Só pull requests: o hook
+   em `.claude/settings.json` nega o push, e os rulesets o recusam para
+   todos (`docs/repository-settings.md`).
+2. Todo pull request vai para a `dev`. A `main` recebe um só, vindo da
+   `dev`, com merge commit; o check obrigatório `promotion` reprova um pull
+   request para a `main` vindo de qualquer outra origem, inclusive depois
+   de uma troca de base.
+3. Aprovação antes do merge, nos dois estágios. O merge é uma ação do
+   mantenedor: um agente nunca faz merge (`gh pr merge` é negado em
+   `.claude/settings.json`).
+4. Incremente a versão no pull request para a `dev` quando a mudança for
+   relevante para uma release; a promoção a carrega (`release-management`).
+5. Mantenedores: as branches de tarefa saem da `dev` e entram por merge
+   local em `sprint/<topic>`, o gate roda uma vez ali, e um único pull
+   request vai para a `dev`. Contribuidores: uma branch no próprio fork, um
+   pull request para a `dev` (`git-workflow`).
 
 ## Stack
 
@@ -162,8 +168,9 @@ uma delas é uma issue própria, aberta por um mantenedor.
   administração do CrateDB existentes.
 - **Apache-2.0**, para o código e para as contribuições a ele
   (`CONTRIBUTING.md`).
-- **Um estágio, `main`.** Merge commits para os pull requests de sprint dos
-  mantenedores; squash permitido para o pull request de um contribuidor.
+- **Dois estágios, `dev` → `main`** (2026-11-24). Na `dev`: merge commits
+  para os pull requests de sprint dos mantenedores, squash permitido para o
+  de um contribuidor. Na `main`: a promoção da `dev`, com merge commit.
 - **As atualizações de dependências são automáticas**: atualizações de
   segurança do Dependabot assim que existe um advisory, atualizações de
   versão semanais e agrupadas, com cooldown de 7 dias. Manter o projeto com
@@ -179,9 +186,10 @@ que fazem.
 
 - Sem código do app, então sem formatação, linting, checagem de tipos ou
   testes do app: eles chegam com a stack.
-- O CodeQL (default setup) analisa o que a `main` tem: os workflows e os
-  hooks em Python. Ele passa a cobrir a linguagem do app quando ela chegar
-  à `main`; confirme isso na aba Security depois do primeiro merge do app.
+- O CodeQL (default setup) analisa a branch padrão, a `dev`: os workflows
+  e os hooks em Python. Ele passa a cobrir a linguagem do app quando ela
+  chegar à `dev`; confirme isso na aba Security depois do primeiro merge do
+  app.
 - Os padrões genéricos e as verificações de validade do secret scanning não
   estão disponíveis neste plano: a push protection só conhece tokens de
   provedores, e o `p/secrets` do semgrep mais a revisão cobrem o resto.
@@ -206,14 +214,17 @@ make ci       # verifying only; what .github/workflows/check.yml runs
 
 ## CI/CD
 
-- `check.yml`: o gate nos pull requests para a `main`. O `gate` roda
-  `make ci` em amd64 e arm64 (e o build do app, quando ele existir); o
-  `check` acrescenta a dependency review e só passa quando todos os jobs da
-  matriz passaram. O `check` é obrigatório.
+- `check.yml`: o gate nos pull requests para a `dev` e a `main`. O `gate`
+  roda `make ci` em amd64 e arm64 (e o build do app, quando ele existir);
+  o `check` acrescenta a dependency review e só passa quando todos os jobs
+  da matriz passaram. Obrigatório.
 - `pr-title.yml`: o título é um título Conventional Commits. Obrigatório.
+- `promotion.yml`: um pull request para a `main` vem da `dev` deste
+  repositório; roda de novo a cada edição, inclusive uma troca de base.
+  Obrigatório na `main`.
 - `create_release.yml`: em um push para a `main`, publica a release
   `v<version>` quando a versão é nova, com notas geradas e um SBOM.
-- `scorecard.yml`: OpenSSF Scorecard, semanalmente e na `main`; resultados
+- `scorecard.yml`: OpenSSF Scorecard, semanalmente e na `dev`; resultados
   na aba Security e no badge do README.
 - O default setup do CodeQL e o Dependabot rodam a partir das configurações
   do repositório e do `.github/dependabot.yml`.

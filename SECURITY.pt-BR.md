@@ -13,8 +13,9 @@ quais não existem.
 ## Versões suportadas
 
 O cratedeck está em pré-alfa e ainda não tem release. Quando tiver, as
-correções entram na `main` e saem na release seguinte; a versão suportada é
-a última release. Não há backport para releases anteriores.
+correções entram na `dev` e saem na release seguinte, quando a `dev` for
+promovida para a `main`; a versão suportada é a última release. Não há
+backport para releases anteriores.
 
 ## Como reportar uma vulnerabilidade
 
@@ -80,18 +81,21 @@ delas é uma vulnerabilidade, não uma funcionalidade:
 
 ## Controles em vigor
 
-- **Rulesets de branch na `main`.** Um pull request é obrigatório e o gate
-  (`check`, `pr-title`) precisa passar, para todos, inclusive o mantenedor;
-  force pushes e exclusão são bloqueados. A aprovação de um code owner é
-  exigida, e só um admin do repositório pode contornar essa aprovação, e
-  apenas em um pull request (`docs/repository-settings.md`).
+- **Rulesets de branch na `dev` e na `main`.** Um pull request é
+  obrigatório e o gate (`check`, `pr-title`) precisa passar, para todos,
+  inclusive o mantenedor; force pushes e exclusão são bloqueados. A `main`
+  recebe só a promoção da `dev` (o check obrigatório `promotion`, que roda
+  de novo quando a base de um pull request muda), com merge commit. A
+  aprovação de um code owner é exigida, e só um admin do repositório pode
+  contornar essa aprovação, e apenas em um pull request
+  (`docs/repository-settings.md`).
 - **Releases são imutáveis.** Tags `v*` não podem ser movidas nem
   excluídas, por ninguém, e os assets de uma release publicada não podem
   ser substituídos.
 - **Análise estática no gate.** semgrep com `--error`
   (`p/python`, `p/secrets`, `p/security-audit`, `p/cwe-top-25`,
   `p/owasp-top-ten`, `p/ci`), zizmor sobre os workflows, e CodeQL
-  (default setup) na `main` e em todo pull request.
+  (default setup) na `dev`, a branch padrão, e nos pull requests para ela.
 - **Cadeia de suprimentos dos workflows.** Actions fixadas pelo SHA completo
   do commit, exigido pela configuração do repositório; só as actions do
   próprio GitHub e uma allowlist explícita podem rodar; `GITHUB_TOKEN`
@@ -113,8 +117,8 @@ delas é uma vulnerabilidade, não uma funcionalidade:
 - **O OpenSSF Scorecard** avalia o repositório semanalmente; os resultados
   ficam na aba Security.
 - **A trava de push** (`.claude/hooks/block_protected_push.py`) recusa o
-  push de um agente para a `main` antes que ele saia da máquina. Uma
-  conveniência: os rulesets são a barreira.
+  push de um agente para a `dev` ou a `main` antes que ele saia da máquina.
+  Uma conveniência: os rulesets são a barreira.
 
 ## Vulnerabilidades aceitas
 

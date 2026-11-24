@@ -22,7 +22,7 @@ outro quadro, e você não inventa um.
    a resposta do usuário, com os seus labels e a sua abordagem. Repasse a
    abordagem: ela limita quanto o trabalho projeta.
 2. **Branch** conforme o `git-workflow`: uma branch de tarefa a partir da
-   `main`, com merge local em `sprint/<topic>` quando várias vão juntas.
+   `dev`, com merge local em `sprint/<topic>` quando várias vão juntas.
 3. **Implementação**, pela sessão orquestradora ou pelo agente de
    desenvolvimento da stack, quando existir um. Dentro do escopo e da
    abordagem da issue; qualquer coisa além disso é proposta, não feita.
@@ -32,10 +32,11 @@ outro quadro, e você não inventa um.
    verde. Revisar um diff que ainda falha desperdiça a revisão.
 6. **A entrega e a pergunta**, como o `git-workflow` descreve ("From task
    to pull request"). Só com a resposta do usuário: push, e o pull request
-   para a `main` com `--assignee "@me"`, o seu label, e uma palavra de
+   para a `dev` com `--assignee "@me"`, o seu label, e uma palavra de
    fechamento por issue. Verifique o estado final, depois envie os links.
 7. O merge é uma ação do mantenedor. Nunca faça merge, feche ou mude labels
-   além da tarefa sem que peçam.
+   além da tarefa sem que peçam. A promoção da `dev` para a `main` só é
+   aberta quando o mantenedor pede (`git-workflow`).
 
 ## Toda issue tem
 

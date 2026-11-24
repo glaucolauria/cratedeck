@@ -36,7 +36,7 @@ tokens; they change in the same pull request as the English.
 | Cursor, Gemini CLI, Copilot and others | yes | `.agents/skills/`, where the tool supports skills | no | no |
 
 A tool without the hook loses a convenience, not a control: the rulesets
-refuse a push to `main` from anyone. A tool without sub-agents runs the
+refuse a push to `dev` or `main` from anyone. A tool without sub-agents runs the
 same reviews in the main session, following the agent's file as a
 checklist.
 
@@ -47,7 +47,7 @@ link: enable `core.symlinks` (and Developer Mode), or point the tool at
 ## The push guard
 
 `.claude/hooks/block_protected_push.py`, a `PreToolUse` hook on Bash:
-it denies a `git push` whose destination is `main` or `master`, wherever
+it denies a `git push` whose destination is `dev`, `main` or `master`, wherever
 the push sits on the command line (after `;` or `&&`, on a later line,
 behind `FOO=1` or `sudo`, inside `sh -c`), with `HEAD` and a bare push
 resolved to the current branch, and `--all` and `--mirror` refused. A

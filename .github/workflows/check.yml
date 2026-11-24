@@ -9,10 +9,11 @@
 # into checking different things. Add or remove a step together with the
 # `ci:` line.
 #
-# `check` is the required status check on main (docs/repository-settings.md).
-# It passes only when every leg of `gate` passed, so a leg can be added or
-# renamed without touching the ruleset. Renaming `check` itself blocks every
-# pull request until the ruleset moves with it.
+# `check` is the required status check on dev and main
+# (docs/repository-settings.md). It passes only when every leg of `gate`
+# passed, so a leg can be added or renamed without touching the rulesets.
+# Renaming `check` itself blocks every pull request until the rulesets move
+# with it. That only dev reaches main is promotion.yml's job.
 #
 # Pull requests from forks run here too, with a read-only token and no
 # secrets: nothing in this workflow needs either.
@@ -20,7 +21,7 @@ name: check
 
 on:
   pull_request:
-    branches: [main]
+    branches: [dev, main]
 
 # A new commit makes the previous run's answer irrelevant.
 concurrency:

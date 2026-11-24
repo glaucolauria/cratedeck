@@ -4,7 +4,7 @@
 
 > Tradução para leitura. O agente carrega a versão em inglês, que é a referência: se as duas divergirem, vale o inglês.
 
-**Quando usar:** sempre que começar o desenvolvimento de uma tarefa no cratedeck, criar branches, commits ou pull requests, ou entregar o trabalho concluído. Nomes de branch, formato de commit, a branch de sprint, o relatório de entrega e a pergunta sobre o próximo passo antes de um pull request, e o que faz um merge na main.
+**Quando usar:** sempre que começar o desenvolvimento de uma tarefa no cratedeck, criar branches, commits ou pull requests, ou entregar o trabalho concluído. Nomes de branch, formato de commit, a branch de sprint, o relatório de entrega e a pergunta sobre o próximo passo antes de um pull request, a promoção da dev para a main, e o que faz um merge em cada estágio.
 
 As regras estão no `AGENTS.md` ("Public repository", "Stage flow"); isto
 aqui é o procedimento. Não deduza o processo a partir dos nomes de branch
@@ -12,12 +12,13 @@ que já estão no histórico.
 
 ## O modelo de estágios
 
-Um estágio, `main`. Toda mudança chega a ela por um pull request; um merge
-que incrementa a versão gera a release (`release-management`).
+Dois estágios. A `dev`, branch padrão, recebe todo pull request; a `main`
+recebe só a promoção da `dev`, e uma promoção que incrementa a versão gera
+a release (`release-management`).
 
-**Nunca faça push para a `main`.** O hook em `.claude/settings.json` nega
-um push cujo destino seja `main` ou `master`; os rulesets o recusam para
-todos, inclusive o mantenedor.
+**Nunca faça push para a `dev` nem para a `main`.** O hook em
+`.claude/settings.json` nega um push cujo destino seja `dev`, `main` ou
+`master`; os rulesets o recusam para todos, inclusive o mantenedor.
 
 ## Antes do primeiro commit em um clone
 
@@ -43,13 +44,13 @@ refactor/<issue>-<slug>  docs/<issue>-<slug>     ci/<issue>-<slug>
 sprint/<topic>           a maintainer's integration branch for several task branches
 ```
 
-- **Um mantenedor** cria a branch a partir da `main`. As branches de tarefa
+- **Um mantenedor** cria a branch a partir da `dev`. As branches de tarefa
   entram por merge em `sprint/<topic>` **localmente** (um merge local não
   roda CI); o `make ci` roda uma vez ali; `qa` e `cybersec` revisam o diff
-  consolidado; um único pull request vai para a `main`. Uma tarefa isolada
+  consolidado; um único pull request vai para a `dev`. Uma tarefa isolada
   pode ir direto da sua branch de tarefa para um pull request.
-- **Um contribuidor** trabalha em uma branch do seu fork e abre o pull
-  request a partir dela para a `main`.
+- **Um contribuidor** trabalha em uma branch do seu fork, criada a partir
+  da `dev`, e abre o pull request a partir dela para a `dev`.
 
 Em cada branch de tarefa, rode só o que é rápido e relevante; o gate
 completo roda uma vez, na branch que vira o pull request. Uma branch morre
@@ -133,7 +134,7 @@ não os exit codes: `gh pr view <n> --json closingIssuesReferences,labels,assign
 ## Pull requests
 
 - **Título** no formato Conventional Commits, em inglês: é a linha nas
-  release notes e, em um squash merge, o commit na `main`. O check
+  release notes e, em um squash merge, o commit na `dev`. O check
   `pr-title` garante isso.
 - **Issues fechadas:** uma palavra de fechamento por issue,
   `Closes #12, closes #15`; confirme com `closingIssuesReferences` depois de
@@ -151,13 +152,32 @@ não os exit codes: `gh pr view <n> --json closingIssuesReferences,labels,assign
 - **Label** no pull request (`bug`, `enhancement`, `chore`, `security`,
   `documentation`, `dependencies`, `github_actions`, mais
   `breaking-change`): as release notes são montadas a partir dele.
-- `gh pr create --base main --assignee "@me" --label <type> --title … --body-file …`.
+- `gh pr create --base dev --assignee "@me" --label <type> --title … --body-file …`.
+
+## Promovendo a dev para a main
+
+Só quando o mantenedor pedir: um pull request da `dev` para a `main`, com
+a mesma entrega e a mesma pergunta sobre o próximo passo de qualquer outro.
+
+- `gh pr create --base main --head dev --assignee "@me" --label <type> --title … --body-file …`.
+  O título diz o que sai: `chore(release): v<version>` quando a versão
+  mudou, `chore: promote dev to main` quando não mudou.
+- O corpo cita cada pull request e cada issue que ele promove. A versão foi
+  incrementada no pull request para a `dev` que precisava disso, nunca
+  aqui.
+- O check obrigatório `promotion` (`promotion.yml`) reprova um pull
+  request para a `main` cuja origem seja qualquer coisa além da `dev` deste
+  repositório, e roda de novo quando a base é trocada.
 
 ## Merge
 
-O mantenedor faz o merge; um agente nunca faz. O pull request de sprint de
-um mantenedor entra como merge commit; o de um contribuidor pode entrar com
-squash, com o título como assunto do commit. Ao fazer merge do próprio pull
-request, o mantenedor usa o bypass do ruleset para a revisão do code owner:
-o gate e o próprio pull request nunca são contornados
-(`docs/repository-settings.md`).
+O mantenedor faz o merge; um agente nunca faz. Na `dev`, o pull request de
+sprint de um mantenedor entra como merge commit; o de um contribuidor pode
+entrar com squash, com o título como assunto do commit. Na `main`, a
+promoção entra como merge commit, o único método que o ruleset dela
+permite: ele mantém o histórico da `dev` na `main`, então a próxima
+promoção mostra só o que é novo, enquanto um squash deixaria a `main` com
+um histórico que a `dev` não compartilha. Ao fazer
+merge do próprio pull request, o mantenedor usa o bypass do ruleset para a
+revisão do code owner: o gate e o próprio pull request nunca são
+contornados (`docs/repository-settings.md`).

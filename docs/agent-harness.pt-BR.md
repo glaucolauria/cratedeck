@@ -37,7 +37,7 @@ custam tokens; elas mudam no mesmo pull request que o inglês.
 | Cursor, Gemini CLI, Copilot e outros | sim | `.agents/skills/`, onde a ferramenta suporta skills | não | não |
 
 Uma ferramenta sem o hook perde uma conveniência, não um controle: os
-rulesets recusam um push para a `main` vindo de qualquer pessoa. Uma
+rulesets recusam um push para a `dev` ou a `main` vindo de qualquer pessoa. Uma
 ferramenta sem sub-agentes roda as mesmas revisões na sessão principal,
 seguindo o arquivo do agente como checklist.
 
@@ -48,7 +48,7 @@ ou aponte a ferramenta diretamente para `.agents/skills/`.
 ## A trava de push
 
 `.claude/hooks/block_protected_push.py`, um hook `PreToolUse` no Bash: ele
-nega um `git push` cujo destino seja `main` ou `master`, onde quer que o
+nega um `git push` cujo destino seja `dev`, `main` ou `master`, onde quer que o
 push esteja na linha de comando (depois de `;` ou `&&`, em uma linha
 seguinte, atrás de `FOO=1` ou `sudo`, dentro de `sh -c`), com `HEAD` e um
 push sem argumentos resolvidos para a branch atual, e `--all` e `--mirror`

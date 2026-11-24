@@ -61,7 +61,7 @@ verificou e o que não conseguiu verificar. "Nenhum problema encontrado" sem
 dizer o que foi examinado não é uma revisão. A nota vai no corpo do pull
 request, então quem chamou a escreve em inglês e na seção em português.
 
-Um achado explorável em código que já está na `main` nunca é escrito em uma
+Um achado explorável em código que já está na `dev` ou na `main` nunca é escrito em uma
 issue ou em um pull request: ele vai para um security advisory privado
 (`SECURITY.md`), e o pull request da correção nomeia o que fecha sem os
 passos para explorar.

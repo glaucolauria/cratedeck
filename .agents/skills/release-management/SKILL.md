@@ -1,15 +1,16 @@
 ---
 name: release-management
-description: Use when deciding whether a change in cratedeck bumps the version and by how much, when preparing a release, or when explaining what a merge into main does and does not do.
+description: Use when deciding whether a change in cratedeck bumps the version and by how much, when preparing a release, or when explaining what a merge into dev or main does and does not do.
 ---
 
 # Release management
 
-## What a merge into `main` does
+## What a merge does
 
-`create_release.yml` runs on the push the merge produces. It reads the
-version (`version` in `package.json`, or `project.version` in
-`pyproject.toml`):
+A merge into `dev` releases nothing. A merge into `main` is only ever the
+promotion of `dev` (`git-workflow`), and `create_release.yml` runs on the
+push it produces. It reads the version (`version` in `package.json`, or
+`project.version` in `pyproject.toml`):
 
 - **No version file** (before the app exists): nothing; a notice says so.
 - **`v<version>` already exists**: nothing. The merge did not bump the
@@ -27,7 +28,8 @@ why the title and the label of every pull request matter.
 ## Versioning
 
 SemVer, read from the point of view of the person who runs cratedeck
-against their cluster. Bump **in the branch**, before the pull request.
+against their cluster. Bump **in the branch**, before the pull request into
+`dev`; the promotion carries the version to `main` unchanged.
 
 | Change | Bump |
 | --- | --- |
@@ -45,6 +47,8 @@ number says. The release notes put it in its own section.
 2. The pull request labelled.
 3. The version decided and, when release-relevant, committed.
 4. The CHANGELOG is the release notes: nothing else to update.
+5. For a promotion: `dev` holds what should ship, and its version is the
+   one to release.
 
 ## After a merge into `main`
 
@@ -63,3 +67,6 @@ error anyone sees unless someone looks.
 - The release runs on `push`, not on `pull_request: closed`: a merged pull
   request from a fork still runs with a read-only token and could not
   create the tag.
+- A promotion merges as a merge commit, never squashed or rebased (the
+  `main` ruleset allows nothing else): `main` keeps `dev`'s history, so the
+  next promotion carries only what is new.

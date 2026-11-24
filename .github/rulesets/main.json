@@ -3,7 +3,7 @@
   "target": "branch",
   "enforcement": "active",
   "conditions": {
-    "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] }
+    "ref_name": { "include": ["refs/heads/main"], "exclude": [] }
   },
   "bypass_actors": [],
   "rules": [
@@ -19,7 +19,7 @@
         "required_review_thread_resolution": false,
         "require_extra_approval_for_unattributed_changes": true,
         "required_reviewers": [],
-        "allowed_merge_methods": ["merge", "squash"]
+        "allowed_merge_methods": ["merge"]
       }
     },
     {
@@ -29,7 +29,8 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           { "context": "check", "integration_id": 15368 },
-          { "context": "pr-title", "integration_id": 15368 }
+          { "context": "pr-title", "integration_id": 15368 },
+          { "context": "promotion", "integration_id": 15368 }
         ]
       }
     }

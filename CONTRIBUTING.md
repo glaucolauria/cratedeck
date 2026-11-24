@@ -31,12 +31,15 @@ Write in English or Portuguese; both are welcome everywhere.
 
 ## Development flow
 
-1. Fork the repository and create a branch:
+1. Fork the repository and create a branch from `dev`, the default branch:
    `feat/<issue>-<slug>`, `fix/<issue>-<slug>`, `docs/<issue>-<slug>`…
 2. Make the change, with the tests that prove it.
 3. Run the gate: `make ci`. Pull requests run the same targets on amd64 and
    arm64.
-4. Open a pull request into `main` and fill in the template.
+4. Open a pull request into `dev` and fill in the template. `main` holds
+   what is released and only receives `dev`, when a maintainer promotes
+   it; a pull request into `main` from any other branch fails the
+   `promotion` check.
 
 The first workflow run of a new contributor waits for a maintainer to
 approve it; that is a security setting, not a judgement of your change.
@@ -62,8 +65,9 @@ approve it; that is a security setting, not a judgement of your change.
 ## Review and merge
 
 A maintainer reviews every pull request; the code owner's approval and a
-green gate are required to merge. A pull request may be merged with a merge
-commit or squashed into one commit titled after the pull request.
+green gate are required to merge. A pull request into `dev` may be merged
+with a merge commit or squashed into one commit titled after the pull
+request.
 
 Changes to `.github/`, `.claude/`, `.agents/`, the `Makefile` or
 `tests/harness/` run in CI or on the maintainers' machines, so they get a

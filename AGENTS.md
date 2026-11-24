@@ -11,7 +11,7 @@ everything said in its issues and pull requests, is read by strangers:
 "Public repository", below, is a hard constraint.
 
 **Shape:** web application. **Stack:** not chosen yet (below).
-**Stage model:** one stage, `main`. **Status:** pre-alpha, no app code yet.
+**Stage model:** two stages, `dev` → `main`. **Status:** pre-alpha, no app code yet.
 
 ## Before every task
 
@@ -67,19 +67,26 @@ requests and comments are all public, and stay public once pushed.
 
 ## Stage flow (hard constraint)
 
-One stage, `main`. A merge that bumps the version releases it
-(`create_release.yml`); any other merge releases nothing.
+Two stages. `dev`, the default branch, is where every change lands;
+`main` receives only the promotion of `dev`. A merge into `dev` releases
+nothing; a promotion that bumps the version releases it
+(`create_release.yml`).
 
-1. Never push to `main`. Pull requests only: the hook in
+1. Never push to `dev` or `main`. Pull requests only: the hook in
    `.claude/settings.json` denies the push, and the rulesets refuse it for
    everyone (`docs/repository-settings.md`).
-2. Approval before merging. Merging is a maintainer's action: an agent
-   never merges (`gh pr merge` is denied in `.claude/settings.json`).
-3. Bump the version in the branch when the change is release-relevant
-   (`release-management`).
-4. Maintainers: task branches merge locally into `sprint/<topic>`, the gate
-   runs once there, one pull request goes into `main`. Contributors: a
-   branch in their fork, a pull request into `main` (`git-workflow`).
+2. Every pull request goes into `dev`. `main` takes one, from `dev`, merged
+   as a merge commit; the required `promotion` check fails a pull request
+   into `main` from any other head, also after a change of base.
+3. Approval before merging, at both stages. Merging is a maintainer's
+   action: an agent never merges (`gh pr merge` is denied in
+   `.claude/settings.json`).
+4. Bump the version in the pull request into `dev` when the change is
+   release-relevant; the promotion carries it (`release-management`).
+5. Maintainers: task branches from `dev` merge locally into
+   `sprint/<topic>`, the gate runs once there, one pull request goes into
+   `dev`. Contributors: a branch in their fork, a pull request into `dev`
+   (`git-workflow`).
 
 ## Stack
 
@@ -150,8 +157,9 @@ an issue of its own, opened by a maintainer.
   admin UIs.
 - **Apache-2.0**, for the code and for contributions to it
   (`CONTRIBUTING.md`).
-- **One stage, `main`.** Merge commits for maintainers' sprint pull
-  requests; squash allowed for a contributor's pull request.
+- **Two stages, `dev` → `main`** (2026-11-24). Into `dev`: merge commits
+  for maintainers' sprint pull requests, squash allowed for a
+  contributor's. Into `main`: the promotion of `dev`, as a merge commit.
 - **Dependency updates are automatic**: Dependabot security updates as
   soon as an advisory exists, version updates weekly and grouped, with a
   7-day cooldown. Keeping the project patched is a goal of its own.
@@ -165,9 +173,9 @@ What the gate and the settings do not do yet, so nobody assumes they do.
 
 - No app code, so no formatting, linting, type checking or app tests: they
   arrive with the stack.
-- CodeQL (default setup) analyses what `main` has: the workflows and the
-  Python hooks. It picks up the app's language once that lands on `main`;
-  confirm it in the Security tab after the first app merge.
+- CodeQL (default setup) analyses the default branch, `dev`: the workflows
+  and the Python hooks. It picks up the app's language once that lands on
+  `dev`; confirm it in the Security tab after the first app merge.
 - Secret scanning's generic patterns and validity checks are not
   available on this plan: push protection knows provider tokens only, and
   semgrep's `p/secrets` plus review cover the rest.
@@ -192,14 +200,17 @@ make ci       # verifying only; what .github/workflows/check.yml runs
 
 ## CI/CD
 
-- `check.yml`: the gate on pull requests to `main`. `gate` runs `make ci`
-  on amd64 and arm64 (and the app's build, once it exists); `check` adds
-  the dependency review and passes only when every leg did. `check` is
-  required.
+- `check.yml`: the gate on pull requests to `dev` and `main`. `gate` runs
+  `make ci` on amd64 and arm64 (and the app's build, once it exists);
+  `check` adds the dependency review and passes only when every leg did.
+  Required.
 - `pr-title.yml`: the title is a Conventional Commits title. Required.
+- `promotion.yml`: a pull request into `main` comes from this repository's
+  `dev`; re-run on every edit, a change of base included. Required on
+  `main`.
 - `create_release.yml`: on a push to `main`, releases `v<version>` when the
   version is new, with generated notes and an SBOM.
-- `scorecard.yml`: OpenSSF Scorecard, weekly and on `main`; results in the
+- `scorecard.yml`: OpenSSF Scorecard, weekly and on `dev`; results in the
   Security tab and the README badge.
 - CodeQL default setup and Dependabot run from the repository settings
   and `.github/dependabot.yml`.

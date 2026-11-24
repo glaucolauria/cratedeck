@@ -8,8 +8,8 @@
 #
 # On `push`, not on `pull_request: closed`: a pull request from a fork runs
 # with a read-only token even once merged, and could not push the tag. A
-# push to main is always a merged pull request (the rulesets allow nothing
-# else), and runs with this repository's token.
+# push to main is always the merged promotion of dev (the rulesets and
+# promotion.yml allow nothing else), and runs with this repository's token.
 #
 # Until the app has a package.json, there is no version and this workflow
 # says so and stops.

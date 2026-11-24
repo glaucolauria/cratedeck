@@ -33,7 +33,7 @@ app, junto com os seus steps no `check.yml` e os seus packs em `SEMGREP`.
 
 ## No CI
 
-O `check.yml` em todo pull request para a `main`:
+O `check.yml` em todo pull request para a `dev` ou a `main`:
 
 - `gate`, uma matriz sobre `ubuntu-24.04` (amd64) e `ubuntu-24.04-arm`
   (arm64): um step por target do `make ci`, cada um rodando mesmo depois que
@@ -42,7 +42,12 @@ O `check.yml` em todo pull request para a `main`:
 - `check`, depois de todos os jobs da matriz: a dependency review (novas
   dependências com advisory de severidade moderada ou pior, ou com uma
   licença incompatível com Apache-2.0), e então falha a menos que todos os
-  jobs da matriz tenham passado. O `check` é o status obrigatório.
+  jobs da matriz tenham passado. O `check` é o status obrigatório nos dois
+  estágios.
+
+O `promotion.yml`, em todo pull request para a `main` e a cada edição de
+um (inclusive uma troca de base), falha a menos que a origem seja a `dev`
+deste repositório. Obrigatório só na `main`.
 
 O `make -k ci` reporta todas as falhas em um terminal, como o gate faz. Uma
 falha em uma só arquitetura é exatamente a informação para a qual a matriz
@@ -68,10 +73,11 @@ make ci          # once, on the branch that becomes the pull request
   passando vira primeiro um caso ali.
 - O `tests/harness/test_repository.py` guarda a estrutura do repositório:
   versões em português, frontmatter de skills e agentes, actions fixadas por
-  SHA, permissões e timeouts dos workflows, os checks obrigatórios, e nenhum
-  nome privado nos arquivos nem nos commits ainda não enviados (contra a
-  lista local do mantenedor, `AGENTS.md`, "Public repository"; pulado onde
-  ela não existe, como no CI).
+  SHA, permissões e timeouts dos workflows, os rulesets dos estágios e os
+  seus checks obrigatórios, o script que reserva a `main` para a `dev`, e
+  nenhum nome privado nos arquivos nem nos commits ainda não enviados
+  (contra a lista local do mantenedor, `AGENTS.md`, "Public repository";
+  pulado onde ela não existe, como no CI).
 
 ## Supressões
 

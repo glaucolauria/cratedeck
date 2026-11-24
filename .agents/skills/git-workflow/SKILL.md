@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: Use whenever starting the development of a task in cratedeck, creating branches, commits or pull requests, or handing finished work back. Branch names, commit format, the sprint branch, the hand-back report and the next-step question before a pull request, and what a merge into main does.
+description: Use whenever starting the development of a task in cratedeck, creating branches, commits or pull requests, or handing finished work back. Branch names, commit format, the sprint branch, the hand-back report and the next-step question before a pull request, the promotion of dev to main, and what a merge into each stage does.
 ---
 
 # Git workflow
@@ -10,12 +10,13 @@ the procedure. Do not infer process from branch names already in history.
 
 ## The stage model
 
-One stage, `main`. Every change reaches it through a pull request; a merge
-that bumps the version releases it (`release-management`).
+Two stages. `dev`, the default branch, receives every pull request;
+`main` receives only the promotion of `dev`, and a promotion that bumps the
+version releases it (`release-management`).
 
-**Never push to `main`.** The hook in `.claude/settings.json` denies a push
-whose destination is `main` or `master`; the rulesets refuse it for
-everyone, the maintainer included.
+**Never push to `dev` or `main`.** The hook in `.claude/settings.json`
+denies a push whose destination is `dev`, `main` or `master`; the rulesets
+refuse it for everyone, the maintainer included.
 
 ## Before the first commit in a clone
 
@@ -40,13 +41,13 @@ refactor/<issue>-<slug>  docs/<issue>-<slug>     ci/<issue>-<slug>
 sprint/<topic>           a maintainer's integration branch for several task branches
 ```
 
-- **A maintainer** branches from `main`. Task branches are merged into
+- **A maintainer** branches from `dev`. Task branches are merged into
   `sprint/<topic>` **locally** (a local merge runs no CI); `make ci` runs
   once there; `qa` and `cybersec` review the consolidated diff; one pull
-  request goes into `main`. A single task may go straight from its task
+  request goes into `dev`. A single task may go straight from its task
   branch to a pull request.
-- **A contributor** works on a branch of their fork and opens the pull
-  request from it into `main`.
+- **A contributor** works on a branch of their fork, from `dev`, and opens
+  the pull request from it into `dev`.
 
 Per task branch, run only what is fast and relevant; the full gate runs
 once, on the branch that becomes the pull request. A branch dies with its
@@ -127,7 +128,7 @@ not exit codes: `gh pr view <n> --json closingIssuesReferences,labels,assignees`
 ## Pull requests
 
 - **Title** in Conventional Commits form, English: it is the line in the
-  release notes and, on a squash merge, the commit on `main`. The
+  release notes and, on a squash merge, the commit on `dev`. The
   `pr-title` check enforces it.
 - **Closing issues:** one closing word per issue, `Closes #12, closes #15`;
   confirm with `closingIssuesReferences` after opening.
@@ -143,12 +144,30 @@ not exit codes: `gh pr view <n> --json closingIssuesReferences,labels,assignees`
 - **Label** the pull request (`bug`, `enhancement`, `chore`, `security`,
   `documentation`, `dependencies`, `github_actions`, plus
   `breaking-change`): the release notes are built from it.
-- `gh pr create --base main --assignee "@me" --label <type> --title … --body-file …`.
+- `gh pr create --base dev --assignee "@me" --label <type> --title … --body-file …`.
+
+## Promoting dev to main
+
+Only when the maintainer asks for it: one pull request from `dev` into
+`main`, with the same hand-back and next-step question as any other.
+
+- `gh pr create --base main --head dev --assignee "@me" --label <type> --title … --body-file …`.
+  The title says what ships: `chore(release): v<version>` when the version
+  moved, `chore: promote dev to main` when it did not.
+- The body names every pull request and issue it promotes. The version was
+  bumped in the pull request into `dev` that needed it, never here.
+- The required `promotion` check (`promotion.yml`) fails a pull request
+  into `main` whose head is anything but this repository's `dev`, and runs
+  again when the base is changed.
 
 ## Merging
 
-The maintainer merges; an agent never does. A maintainer's sprint pull
-request merges as a merge commit; a contributor's may be squashed, with the
-title as the commit subject. Merging their own pull request, the maintainer
-uses the ruleset's bypass for the code-owner review: the gate and the pull
-request itself are never bypassed (`docs/repository-settings.md`).
+The maintainer merges; an agent never does. Into `dev`, a maintainer's
+sprint pull request merges as a merge commit; a contributor's may be
+squashed, with the title as the commit subject. Into `main`, the promotion
+merges as a merge commit, the only method its ruleset allows: it keeps
+`dev`'s history in `main`, so the next promotion shows only what is new,
+where a squash would leave `main` with a history `dev` does not share. Merging their own pull
+request, the maintainer uses the ruleset's bypass for the code-owner
+review: the gate and the pull request itself are never bypassed
+(`docs/repository-settings.md`).

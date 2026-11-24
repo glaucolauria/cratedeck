@@ -1,6 +1,6 @@
 # Who answers for each part of the repository, and whom GitHub asks to
 # review. The `code-owner-review` ruleset requires a code owner's approval
-# on every pull request into main (docs/repository-settings.md).
+# on every pull request into dev and main (docs/repository-settings.md).
 * @glaucolauria
 
 # Security-sensitive surfaces, listed so that broadening the default above

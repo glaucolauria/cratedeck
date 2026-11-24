@@ -9,8 +9,9 @@ on:
   branch_protection_rule:
   schedule:
     - cron: "30 9 * * 1"
+  # The default branch, dev: Scorecard publishes results only from there.
   push:
-    branches: [main]
+    branches: [dev]
 
 permissions: {}
 

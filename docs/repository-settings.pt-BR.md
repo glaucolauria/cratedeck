@@ -15,18 +15,22 @@ reproduzem o estado. Aplicado em 2026-11-24.
 | Configuração | Valor | Por quê |
 | --- | --- | --- |
 | Descrição, topics | definidos | encontrabilidade |
+| Branch padrão | `dev` | todo pull request entra ali; o Dependabot e as palavras de fechamento (`Closes #12`) agem na branch padrão |
 | Issues, Discussions | ativados | issues para o trabalho, Discussions para perguntas e ideias |
 | Wiki, Projects | desativados | a documentação fica no repositório, o trabalho nas issues |
 | Merge commits | ativado | o pull request de sprint de um mantenedor mantém os commits das tarefas |
 | Squash merging | ativado | o pull request de um contribuidor vira um commit com o título dele |
 | Rebase merging | desativado | |
-| Título do commit no merge e no squash | o título do pull request | a `main` se lê como as release notes |
+| Título do commit no merge e no squash | o título do pull request | a `dev` e a `main` se leem como as release notes |
 | Delete head branches | ativado | uma branch morre com o seu pull request |
 | Auto-merge | desativado | um mantenedor faz o merge, à mão |
 | Suggest updating branches | ativado | |
 
 ```bash
-gh api -X PATCH $R \
+# The stage branches: dev starts as a copy of main, then becomes the default.
+gh api -X POST $R/git/refs -f ref=refs/heads/dev \
+  -f sha="$(gh api $R/git/ref/heads/main --jq .object.sha)"
+gh api -X PATCH $R -f default_branch=dev \
   -F has_wiki=false -F has_projects=false -F has_discussions=true -F has_issues=true \
   -F allow_merge_commit=true -F allow_squash_merge=true -F allow_rebase_merge=false \
   -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=COMMIT_MESSAGES \
@@ -46,12 +50,22 @@ request.
 
 | Ruleset | Alvo | Regras | Bypass |
 | --- | --- | --- | --- |
-| `main` | branch padrão | sem exclusão, sem force push; um pull request é obrigatório (merge ou squash); `check` e `pr-title` precisam passar, vindos do GitHub Actions | **ninguém** |
-| `code-owner-review` | branch padrão | uma aprovação, de um code owner; aprovações desatualizadas descartadas; o último push aprovado por alguém que não o seu autor; conversas resolvidas | admin do repositório, **só para pull requests** |
+| `dev` | `refs/heads/dev` | sem exclusão, sem force push; um pull request é obrigatório (merge ou squash); `check` e `pr-title` precisam passar, vindos do GitHub Actions | **ninguém** |
+| `main` | `refs/heads/main` | o mesmo, só merge commits, e o `promotion` também precisa passar | **ninguém** |
+| `code-owner-review` | `dev` e `main` | uma aprovação, de um code owner; aprovações desatualizadas descartadas; o último push aprovado por alguém que não o seu autor; conversas resolvidas | admin do repositório, **só para pull requests** |
 | `release-tags` | tags `v*` | sem exclusão, sem atualização, sem force push (a criação é permitida) | **ninguém**; numa emergência o ruleset é desativado, o que o log de auditoria registra |
 
+- Os rulesets nomeiam as suas branches em vez de `~DEFAULT_BRANCH`: a
+  branch padrão é a `dev`, e a `main` precisa continuar protegida seja
+  qual for a padrão (`tests/harness/test_repository.py`).
 - O pull request de um contribuidor precisa da aprovação do mantenedor, do
-  gate verde e de um pull request; nada mais chega à `main`.
+  gate verde e de um pull request; nada mais chega à `dev`.
+- A `main` recebe só a promoção da `dev`. O `promotion` (`promotion.yml`)
+  reprova um pull request para a `main` vindo de qualquer outra origem, e
+  roda de novo quando a base de um pull request é trocada, para que um
+  resultado verde de uma execução contra a `dev` não seja aproveitado. Só
+  merge commits, então a `main` mantém o histórico da `dev` e a próxima
+  promoção mostra só o que é novo.
 - O mantenedor não pode aprovar o próprio pull request, então faz o merge
   pelo bypass do `code-owner-review`, que o botão de merge oferece
   explicitamente e os insights do ruleset registram. O ruleset `main`
@@ -61,15 +75,15 @@ request.
   bloqueia todo pull request até o ruleset acompanhar.
 
 ```bash
-for f in main code-owner-review release-tags; do
+for f in dev main code-owner-review release-tags; do
   gh api -X POST $R/rulesets --input .github/rulesets/$f.json
 done
 # To change one: gh api -X PUT $R/rulesets/<id> --input .github/rulesets/<name>.json
 ```
 
-**Depois que o CodeQL tiver analisado a `main` uma vez**, adicione uma regra
-de code scanning ao ruleset `main`, para que um pull request que introduz um
-alerta de severidade alta não possa entrar:
+**Depois que o CodeQL tiver analisado a `dev` uma vez**, adicione uma regra
+de code scanning aos rulesets `dev` e `main`, para que um pull request que
+introduz um alerta de severidade alta não possa entrar:
 
 ```json
 { "type": "code_scanning", "parameters": { "code_scanning_tools": [
@@ -86,7 +100,7 @@ alerta de severidade alta não possa entrar:
 | Atualizações de versão do Dependabot | `.github/dependabot.yml`: semanais, agrupadas, cooldown de 7 dias |
 | Secret scanning, push protection | ativados |
 | Secret scanning: padrões genéricos, verificações de validade | não disponíveis neste plano (`SECURITY.md`, "Known limits") |
-| CodeQL | default setup, suíte de queries estendida; analisa as linguagens que a `main` tem |
+| CodeQL | default setup, suíte de queries estendida; analisa as linguagens que a branch padrão, a `dev`, tem |
 | OpenSSF Scorecard | `.github/workflows/scorecard.yml` |
 | Releases imutáveis | ativado: depois de publicada, os assets e a tag de uma release não podem mudar |
 
@@ -149,7 +163,7 @@ gh label create chore --color c5def5 --description "Tooling, process or maintena
 Somente leitura; compare a saída com as tabelas acima.
 
 ```bash
-gh api $R --jq '{has_wiki, has_projects, has_discussions, allow_merge_commit,
+gh api $R --jq '{default_branch, has_wiki, has_projects, has_discussions, allow_merge_commit,
   allow_squash_merge, allow_rebase_merge, delete_branch_on_merge, allow_auto_merge,
   security: .security_and_analysis}'
 gh api $R/rulesets --jq '.[] | {id, name, enforcement}'

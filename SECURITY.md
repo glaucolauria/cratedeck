@@ -12,8 +12,9 @@ security-relevant, and which protections are and are not in place.
 ## Supported versions
 
 cratedeck is pre-alpha and has no release yet. Once it has, fixes land on
-`main` and ship in the next release; the supported version is the latest
-release. There is no backport to older releases.
+`dev` and ship in the next release, when `dev` is promoted to `main`; the
+supported version is the latest release. There is no backport to older
+releases.
 
 ## Reporting a vulnerability
 
@@ -77,9 +78,11 @@ a vulnerability, not a feature:
 
 ## Controls in place
 
-- **Branch rulesets on `main`.** A pull request is required and the gate
-  (`check`, `pr-title`) must pass, for everyone, the maintainer included;
-  force pushes and deletion are blocked. A code owner's approval is
+- **Branch rulesets on `dev` and `main`.** A pull request is required and
+  the gate (`check`, `pr-title`) must pass, for everyone, the maintainer
+  included; force pushes and deletion are blocked. `main` takes only the
+  promotion of `dev` (the required `promotion` check, re-run when a pull
+  request's base changes), as a merge commit. A code owner's approval is
   required, and only a repository admin may bypass that approval, for a
   pull request only (`docs/repository-settings.md`).
 - **Releases are immutable.** `v*` tags cannot be moved or deleted, by
@@ -87,7 +90,8 @@ a vulnerability, not a feature:
 - **Static analysis in the gate.** semgrep with `--error`
   (`p/python`, `p/secrets`, `p/security-audit`, `p/cwe-top-25`,
   `p/owasp-top-ten`, `p/ci`), zizmor over the workflows, and CodeQL
-  (default setup) on `main` and every pull request.
+  (default setup) on `dev`, the default branch, and the pull requests into
+  it.
 - **Workflow supply chain.** Actions pinned by full commit SHA, enforced by
   the repository setting; only GitHub's own actions and an explicit
   allowlist may run; `GITHUB_TOKEN` read-only by default and widened per
@@ -108,8 +112,8 @@ a vulnerability, not a feature:
 - **OpenSSF Scorecard** scores the repository weekly; results are in the
   Security tab.
 - **The push guard** (`.claude/hooks/block_protected_push.py`) refuses an
-  agent's push to `main` before it leaves the machine. A convenience: the
-  rulesets are the boundary.
+  agent's push to `dev` or `main` before it leaves the machine. A
+  convenience: the rulesets are the boundary.
 
 ## Accepted vulnerabilities
 

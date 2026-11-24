@@ -34,7 +34,7 @@ app's code, together with their steps in `check.yml` and their packs in
 
 ## In CI
 
-`check.yml` on every pull request into `main`:
+`check.yml` on every pull request into `dev` or `main`:
 
 - `gate`, a matrix over `ubuntu-24.04` (amd64) and `ubuntu-24.04-arm`
   (arm64): one step per target of `make ci`, each running even after an
@@ -42,7 +42,12 @@ app's code, together with their steps in `check.yml` and their packs in
   joins this matrix.
 - `check`, after every leg: the dependency review (new dependencies with a
   moderate-or-worse advisory, or a license that does not fit Apache-2.0),
-  then it fails unless every leg passed. `check` is the required status.
+  then it fails unless every leg passed. `check` is the required status on
+  both stages.
+
+`promotion.yml`, on every pull request into `main` and on every edit to
+one (a change of base included), fails unless the head is this
+repository's `dev`. Required on `main` only.
 
 `make -k ci` reports every failure in a terminal, as the gate does. A
 failure on one architecture only is the information the matrix exists
@@ -67,10 +72,11 @@ make ci          # once, on the branch that becomes the pull request
   case there first.
 - `tests/harness/test_repository.py` holds the repository's structure:
   Portuguese twins, skill and agent frontmatter, actions pinned by SHA,
-  workflow permissions and timeouts, the required checks, and no private
-  names in the files or unpushed commits (against the maintainer's local
-  list, `AGENTS.md`, "Public repository"; skipped where there is none, as
-  in CI).
+  workflow permissions and timeouts, the stage rulesets and their required
+  checks, the script that keeps `main` for `dev`, and no private names in
+  the files or unpushed commits (against the maintainer's local list,
+  `AGENTS.md`, "Public repository"; skipped where there is none, as in
+  CI).
 
 ## Suppressions
 

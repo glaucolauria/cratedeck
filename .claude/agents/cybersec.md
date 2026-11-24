@@ -58,7 +58,7 @@ not. "No issues found" without saying what was examined is not a review.
 The note goes into the pull request body, so the caller writes it in
 English and in the Portuguese section.
 
-An exploitable finding in code already on `main` is never written into an
+An exploitable finding in code already on `dev` or `main` is never written into an
 issue or a pull request: it goes to a private security advisory
 (`SECURITY.md`), and the fix's pull request names what it closes without
 the steps to exploit it.

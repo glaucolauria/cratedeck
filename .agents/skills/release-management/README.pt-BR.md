@@ -4,12 +4,14 @@
 
 > Tradução para leitura. O agente carrega a versão em inglês, que é a referência: se as duas divergirem, vale o inglês.
 
-**Quando usar:** ao decidir se uma mudança no cratedeck incrementa a versão e em quanto, ao preparar uma release, ou ao explicar o que um merge na main faz e o que não faz.
+**Quando usar:** ao decidir se uma mudança no cratedeck incrementa a versão e em quanto, ao preparar uma release, ou ao explicar o que um merge na dev ou na main faz e o que não faz.
 
-## O que um merge na `main` faz
+## O que um merge faz
 
-O `create_release.yml` roda no push que o merge produz. Ele lê a versão
-(`version` em `package.json`, ou `project.version` em `pyproject.toml`):
+Um merge na `dev` não gera release. Um merge na `main` é sempre a promoção
+da `dev` (`git-workflow`), e o `create_release.yml` roda no push que ele
+produz. Ele lê a versão (`version` em `package.json`, ou `project.version`
+em `pyproject.toml`):
 
 - **Sem arquivo de versão** (antes de o app existir): nada; um aviso diz
   isso.
@@ -27,7 +29,8 @@ mão, e é por isso que o título e o label de cada pull request importam.
 ## Versionamento
 
 SemVer, lido do ponto de vista de quem roda o cratedeck contra o próprio
-cluster. Incremente **na branch**, antes do pull request.
+cluster. Incremente **na branch**, antes do pull request para a `dev`; a
+promoção leva a versão para a `main` sem mudá-la.
 
 | Mudança | Incremento |
 | --- | --- |
@@ -45,6 +48,8 @@ número. As release notes a colocam em uma seção própria.
 2. O pull request com label.
 3. A versão decidida e, quando relevante para a release, commitada.
 4. O CHANGELOG são as release notes: não há mais nada a atualizar.
+5. Numa promoção: a `dev` tem o que deve sair, e a versão dela é a que vai
+   para a release.
 
 ## Depois de um merge na `main`
 
@@ -63,3 +68,6 @@ release sem nenhum erro visível, a menos que alguém vá olhar.
 - A release roda em `push`, não em `pull_request: closed`: um pull request
   de fork que entrou ainda roda com um token somente leitura e não
   conseguiria criar a tag.
+- Uma promoção entra como merge commit, nunca com squash nem rebase (o
+  ruleset da `main` não permite outra coisa): a `main` mantém o histórico
+  da `dev`, então a próxima promoção leva só o que é novo.

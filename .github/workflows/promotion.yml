@@ -1,0 +1,44 @@
+# main receives dev and nothing else (AGENTS.md, "Stage flow"), so what
+# reaches a release has been on dev first. Its job, `promotion`, is a
+# required status check on main only: a pull request into main from another
+# branch, or from a fork's branch named dev, fails it.
+#
+# A workflow of its own, not a step of check.yml, because it must re-run
+# when a pull request's base is changed: retargeting fires `edited`, which
+# does not re-run the gate, and a green result from a run against dev would
+# otherwise stay on the commit. A pull request into dev never runs it, so
+# it never leaves a `promotion` result for main to find.
+#
+# The head's name reaches the shell through the environment, never through
+# `${{ }}` in the script. tests/harness/test_repository.py runs this script
+# and pins its trigger and environment.
+name: promotion
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches: [main]
+
+permissions: {}
+
+# Only the newest base and head matter.
+concurrency:
+  group: promotion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  promotion:
+    name: promotion
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 2
+    steps:
+      - name: Only dev is promoted to main
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != "dev" ] || [ "$HEAD_REPO" != "$REPO" ]; then
+            echo "::error::main only receives dev, from this repository: open the pull request into dev."
+            exit 1
+          fi

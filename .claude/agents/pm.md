@@ -23,7 +23,7 @@ board, and you do not invent one.
    `issue-hygiene` and opened only on the user's answer, with its labels
    and approach. Hand the approach on: it bounds how much the work
    designs.
-2. **Branch** per `git-workflow`: a task branch from `main`, merged locally
+2. **Branch** per `git-workflow`: a task branch from `dev`, merged locally
    into `sprint/<topic>` when several go together.
 3. **Implementation**, by the orchestrating session or the stack's dev
    agent once one exists. Inside the issue's scope and approach; anything
@@ -34,10 +34,11 @@ board, and you do not invent one.
    green. Reviewing a diff that still fails wastes the review.
 6. **The hand-back and the question**, as `git-workflow` lays them out
    ("From task to pull request"). Only on the user's answer: push, and the
-   pull request into `main` with `--assignee "@me"`, its label, and one
+   pull request into `dev` with `--assignee "@me"`, its label, and one
    closing word per issue. Verify the end state, then send the links.
 7. Merging is the maintainer's action. Never merge, close or relabel
-   beyond the task without being asked.
+   beyond the task without being asked. The promotion of `dev` to `main`
+   is opened only when the maintainer asks (`git-workflow`).
 
 ## Every issue has
 

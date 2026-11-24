@@ -55,9 +55,13 @@ def denial(output: str) -> str:
         ("git push -u origin master", "master"),
         ("git push --force origin +main", "main"),
         ("git push origin main master", "main, master"),
+        ("git push origin dev", "dev"),
+        ("git push origin HEAD:refs/heads/dev", "dev"),
+        ("git push origin dev main", "dev, main"),
         # Deleting a stage branch writes to it too.
         ("git push origin :main", "main"),
         ("git push --delete origin main", "main"),
+        ("git push origin :dev", "dev"),
         # Options before and between operands.
         ("git -C /repo push origin main", "main"),
         ("git push -o ci.skip origin main", "main"),
@@ -114,8 +118,9 @@ def test_a_push_to_a_stage_branch_is_denied(monkeypatch, command, names):
 )
 def test_head_is_the_current_branch(monkeypatch, command):
     assert decide(monkeypatch, bash(command), branch="feat/x") == ""
-    reason = denial(decide(monkeypatch, bash(command), branch="main"))
-    assert "write to main," in reason
+    for stage in ("dev", "main"):
+        reason = denial(decide(monkeypatch, bash(command), branch=stage))
+        assert f"write to {stage}," in reason
 
 
 @pytest.mark.parametrize(
@@ -125,9 +130,10 @@ def test_a_push_without_refspec_is_judged_by_the_current_branch(
     monkeypatch, command
 ):
     assert decide(monkeypatch, bash(command), branch="feature/x") == ""
-    assert "write to main," in denial(
-        decide(monkeypatch, bash(command), branch="main")
-    )
+    for stage in ("dev", "main"):
+        assert f"write to {stage}," in denial(
+            decide(monkeypatch, bash(command), branch=stage)
+        )
 
 
 def test_a_detached_head_or_unknown_branch_is_not_protected(monkeypatch):
@@ -143,8 +149,11 @@ def test_a_detached_head_or_unknown_branch_is_not_protected(monkeypatch):
         "git push origin feature/main",
         "git push origin hotfix-dev",
         "git push origin main-fix",
+        "git push origin feature/dev",
+        "git push origin devtools",
         # From a protected branch to another name: only destinations count.
         "git push origin main:feature",
+        "git push origin dev:sprint/x",
         "git push origin origin/main:refs/heads/sprint/x",
         # Tags are not branches.
         "git push origin refs/tags/main",

@@ -32,12 +32,16 @@ Escreva em inglês ou português; os dois são bem-vindos em todo lugar.
 
 ## Fluxo de desenvolvimento
 
-1. Faça um fork do repositório e crie uma branch:
-   `feat/<issue>-<slug>`, `fix/<issue>-<slug>`, `docs/<issue>-<slug>`…
+1. Faça um fork do repositório e crie uma branch a partir da `dev`, a
+   branch padrão: `feat/<issue>-<slug>`, `fix/<issue>-<slug>`,
+   `docs/<issue>-<slug>`…
 2. Faça a mudança, com os testes que a comprovam.
 3. Rode o gate: `make ci`. Pull requests rodam os mesmos targets em amd64 e
    arm64.
-4. Abra um pull request para a `main` e preencha o template.
+4. Abra um pull request para a `dev` e preencha o template. A `main` guarda
+   o que foi lançado e só recebe a `dev`, quando um mantenedor a promove;
+   um pull request para a `main` vindo de qualquer outra branch reprova no
+   check `promotion`.
 
 A primeira execução de workflow de um novo contribuidor espera um mantenedor
 aprová-la; isso é uma configuração de segurança, não um julgamento da sua
@@ -64,8 +68,9 @@ mudança.
 ## Revisão e merge
 
 Um mantenedor revisa todo pull request; a aprovação do code owner e um gate
-verde são exigidos para o merge. Um pull request pode entrar com um merge
-commit ou com squash em um único commit com o título do pull request.
+verde são exigidos para o merge. Um pull request para a `dev` pode entrar
+com um merge commit ou com squash em um único commit com o título do pull
+request.
 
 Mudanças em `.github/`, `.claude/`, `.agents/`, no `Makefile` ou em
 `tests/harness/` rodam no CI ou nas máquinas dos mantenedores, então recebem

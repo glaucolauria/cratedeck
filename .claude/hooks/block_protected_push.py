@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Deny a `git push` whose destination is a protected branch.
 
-Every change reaches `main` through a pull request (AGENTS.md, "Stage flow";
-the `git-workflow` skill). The repository's rulesets enforce that
+Every change reaches the stage branches, `dev` and then `main`, through a
+pull request (AGENTS.md, "Stage flow"; the `git-workflow` skill). The repository's rulesets enforce that
 server-side (docs/repository-settings.md). This hook refuses the push before
 it leaves the machine, so the refusal is immediate and says what to do
 instead.
@@ -40,8 +40,10 @@ from typing import Any
 
 from shell_words import basename, commands_of
 
-# The stage branch, and the name a fresh clone elsewhere may still use.
-PROTECTED = frozenset({"main", "master"})
+# The stage branches, and the name a fresh clone elsewhere may still use.
+# tests/harness/test_repository.py checks that every branch a ruleset
+# protects is here.
+PROTECTED = frozenset({"dev", "main", "master"})
 GIT_OPTIONS_WITH_VALUE = (
     "-C",
     "--git-dir",
@@ -191,10 +193,11 @@ def blocked(command: str, cwd: str | None) -> list[str]:
 def deny(targets: list[str]) -> None:
     names = ", ".join(sorted(set(targets)))
     reason = (
-        f"Push blocked: it would write to {names}, and `main` only changes "
-        "through a pull request (the git-workflow skill). Push a task or "
-        "sprint branch and open a PR. Pushing *from* a protected branch to "
-        "another name is fine; only the destination is blocked."
+        f"Push blocked: it would write to {names}, and the stage branches "
+        "(`dev`, then `main`) only change through a pull request (the "
+        "git-workflow skill). Push a task or sprint branch and open a PR "
+        "into `dev`. Pushing *from* a protected branch to another name is "
+        "fine; only the destination is blocked."
     )
     json.dump(
         {

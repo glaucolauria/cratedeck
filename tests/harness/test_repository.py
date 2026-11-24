@@ -1,7 +1,8 @@
 """The repository's structure: the rules in AGENTS.md that a test can hold.
 
-Each test names the rule it holds. They read files only, with the standard
-library, so they run anywhere `make test` does.
+Each test names the rule it holds. They read files, and run git or a
+workflow's own shell script, with the standard library only, so they run
+anywhere `make test` does.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import block_protected_push
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -194,22 +196,141 @@ def test_the_gate_runs_every_target_of_make_ci():
     assert steps == make_targets("ci")
 
 
-def test_every_required_check_is_a_job():
-    # Renaming a required job blocks every pull request.
-    ruleset = json.loads(read(ROOT / ".github" / "rulesets" / "main.json"))
-    required = [
+# ------------------------------------- AGENTS.md, "Stage flow" (dev, main)
+
+STAGES = ("dev", "main")
+JOB_NAME = re.compile(r"^\s{4}name:\s*(\S+)\s*$", re.MULTILINE)
+PR_BRANCHES = re.compile(
+    r"^  pull_request:\n(?:    .*\n)*?    branches: \[([^\]]*)\]", re.MULTILINE
+)
+
+
+def branch_rulesets() -> list[dict]:
+    return [
+        ruleset
+        for path in sorted((ROOT / ".github" / "rulesets").glob("*.json"))
+        if (ruleset := json.loads(read(path)))["target"] == "branch"
+    ]
+
+
+def protected_branches(ruleset: dict) -> set[str]:
+    return {
+        ref.removeprefix("refs/heads/")
+        for ref in ruleset["conditions"]["ref_name"]["include"]
+    }
+
+
+def required_checks(ruleset: dict) -> list[str]:
+    return [
         check["context"]
         for rule in ruleset["rules"]
         if rule["type"] == "required_status_checks"
         for check in rule["parameters"]["required_status_checks"]
     ]
-    names = {
-        name
-        for workflow in workflow_files()
-        for name in re.findall(r"^\s{4}name:\s*(\S+)\s*$", read(workflow), re.M)
+
+
+def test_every_ruleset_names_its_branches():
+    # `~DEFAULT_BRANCH` would move a protection when the default branch
+    # moves; dev is the default and main must stay protected.
+    for ruleset in branch_rulesets():
+        for ref in ruleset["conditions"]["ref_name"]["include"]:
+            assert ref.startswith("refs/heads/"), (ruleset["name"], ref)
+
+
+def test_every_stage_requires_the_gate():
+    gated = {
+        branch
+        for ruleset in branch_rulesets()
+        if {"check", "pr-title"} <= set(required_checks(ruleset))
+        for branch in protected_branches(ruleset)
     }
-    assert required
-    assert set(required) <= names, set(required) - names
+    assert gated == set(STAGES)
+
+
+def test_the_push_guard_protects_every_stage():
+    # The hook refuses locally what the rulesets refuse on the server.
+    branches = {b for r in branch_rulesets() for b in protected_branches(r)}
+    assert branches <= block_protected_push.PROTECTED
+
+
+def test_every_required_check_runs_where_it_is_required():
+    # A required check its workflow never runs on that branch, or a renamed
+    # required job, blocks every pull request into the branch.
+    runs_on: dict[str, set[str]] = {}
+    for workflow in workflow_files():
+        text = read(workflow)
+        match = PR_BRANCHES.search(text)
+        branches = {b.strip() for b in match.group(1).split(",")} if match else set()
+        for name in JOB_NAME.findall(text):
+            runs_on.setdefault(name, set()).update(branches)
+    for ruleset in branch_rulesets():
+        for check in required_checks(ruleset):
+            assert check in runs_on, f"{ruleset['name']}: no job named {check}"
+            missing = protected_branches(ruleset) - runs_on[check]
+            assert not missing, f"{check} does not run on pull requests into {missing}"
+
+
+def test_only_main_requires_the_promotion_check():
+    required = {r["name"]: required_checks(r) for r in branch_rulesets()}
+    assert "promotion" in required["main"]
+    assert "promotion" not in required["dev"]
+
+
+def test_the_promotion_check_reruns_and_reads_the_real_head():
+    # `edited` is the event a change of base fires: without it, a green
+    # result from before the retarget would stay on the commit. The
+    # environment is what the script compares; mapped from anything else,
+    # the script's own test below would still pass.
+    text = read(WORKFLOWS / "promotion.yml")
+    assert "    types: [opened, edited, reopened, synchronize]\n" in text
+    assert "    branches: [main]\n" in text
+    for line in (
+        "HEAD_REF: ${{ github.head_ref }}",
+        "HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}",
+        "REPO: ${{ github.repository }}",
+    ):
+        assert f"          {line}\n" in text, line
+    assert not re.search(r"^\s+(if|continue-on-error):", text, re.MULTILINE)
+
+
+def promotion_script() -> str:
+    """The `run:` of promotion.yml's step that keeps main for dev."""
+    lines = read(WORKFLOWS / "promotion.yml").splitlines()
+    start = lines.index("      - name: Only dev is promoted to main")
+    run = next(i for i in range(start, len(lines)) if lines[i] == "        run: |")
+    body = []
+    for line in lines[run + 1 :]:
+        if line.strip() and not line.startswith("          "):
+            break
+        body.append(line[10:])
+    return "\n".join(body)
+
+
+@pytest.mark.parametrize(
+    ("head_ref", "head_repo", "passes"),
+    [
+        ("dev", "owner/cratedeck", True),
+        ("feat/1-x", "owner/cratedeck", False),
+        ("sprint/topic", "owner/cratedeck", False),
+        ("dev", "someone/cratedeck", False),
+        ("dev; true", "owner/cratedeck", False),
+        ("", "owner/cratedeck", False),
+    ],
+)
+def test_only_dev_is_promoted_to_main(head_ref, head_repo, passes):
+    result = subprocess.run(
+        ["bash", "-e", "-c", promotion_script()],
+        env={
+            "PATH": os.environ["PATH"],
+            "HEAD_REF": head_ref,
+            "HEAD_REPO": head_repo,
+            "REPO": "owner/cratedeck",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert (result.returncode == 0) is passes, result.stdout
 
 
 # ---------------------------------- AGENTS.md, "Public repository", rule 1
@@ -307,7 +428,7 @@ def test_no_private_names_in_the_files(names):
 
 def test_no_private_names_in_the_commits(names):
     # Author and committer names and e-mails, and messages, of every commit
-    # on this branch that is not on the remote's main yet.
+    # on this branch that is on no remote branch yet.
     log = git(
         "log", "--format=%an%n%ae%n%cn%n%ce%n%B", "HEAD", "--not", "--remotes"
     )
