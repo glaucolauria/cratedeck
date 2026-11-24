@@ -1,0 +1,18 @@
+# Who answers for each part of the repository, and whom GitHub asks to
+# review. The `code-owner-review` ruleset requires a code owner's approval
+# on every pull request into main (docs/repository-settings.md).
+* @glaucolauria
+
+# Security-sensitive surfaces, listed so that broadening the default above
+# never silently loosens review here. Later matches win; keep these last.
+# .claude/, .agents/, the Makefile and tests/ run on a maintainer's machine
+# when they check a branch out: review them as code that executes.
+/.github/            @glaucolauria
+/.claude/            @glaucolauria
+/.agents/            @glaucolauria
+/AGENTS.md           @glaucolauria
+/CLAUDE.md           @glaucolauria
+/Makefile            @glaucolauria
+/tests/              @glaucolauria
+/SECURITY.md         @glaucolauria
+/SECURITY.pt-BR.md   @glaucolauria

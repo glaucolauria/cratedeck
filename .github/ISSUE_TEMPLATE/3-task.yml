@@ -1,0 +1,39 @@
+name: "\U0001F9E9 Task"
+description: Tooling, process, documentation or maintenance work that is neither a bug nor a feature
+labels: ["chore", "triage"]
+body:
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What this touches, and why now.
+    validations:
+      required: true
+  - type: dropdown
+    id: task-type
+    attributes:
+      label: Task type
+      options:
+        - tooling
+        - ci/cd
+        - documentation
+        - security
+        - dependency update
+        - refactor
+        - maintenance
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we know it is done. `make ci` green is implied.
+      value: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and rollback
+      description: What could go wrong, and how it is undone.

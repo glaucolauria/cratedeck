@@ -1,0 +1,36 @@
+# Categories for the notes `gh release create --generate-notes` writes when
+# create_release.yml cuts a release. They read the labels of the merged
+# pull requests, so an unlabelled PR lands in "Other Changes": label the PR,
+# not only the issue. Each line is a PR title, in English.
+changelog:
+  exclude:
+    labels:
+      - duplicate
+      - invalid
+      - wontfix
+  categories:
+    - title: "Security · Segurança"
+      labels:
+        - security
+    - title: "Breaking Changes · Mudanças incompatíveis"
+      labels:
+        - breaking-change
+    - title: "New Features · Novidades"
+      labels:
+        - enhancement
+    - title: "Bug Fixes · Correções"
+      labels:
+        - bug
+    - title: "Documentation · Documentação"
+      labels:
+        - documentation
+    - title: "Dependencies · Dependências"
+      labels:
+        - dependencies
+    - title: "CI/Tooling · CI e ferramentas"
+      labels:
+        - github_actions
+        - chore
+    - title: "Other Changes · Outras mudanças"
+      labels:
+        - "*"
