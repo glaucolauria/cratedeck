@@ -134,8 +134,8 @@ não os exit codes: `gh pr view <n> --json closingIssuesReferences,labels,assign
 ## Pull requests
 
 - **Título** no formato Conventional Commits, em inglês: é a linha nas
-  release notes e, em um squash merge, o commit na `dev`. O check
-  `pr-title` garante isso.
+  release notes e o título do merge commit na `dev`. O check `pr-title`
+  garante isso.
 - **Issues fechadas:** uma palavra de fechamento por issue,
   `Closes #12, closes #15`; confirme com `closingIssuesReferences` depois de
   abrir.
@@ -171,13 +171,11 @@ a mesma entrega e a mesma pergunta sobre o próximo passo de qualquer outro.
 
 ## Merge
 
-O mantenedor faz o merge; um agente nunca faz. Na `dev`, o pull request de
-sprint de um mantenedor entra como merge commit; o de um contribuidor pode
-entrar com squash, com o título como assunto do commit. Na `main`, a
-promoção entra como merge commit, o único método que o ruleset dela
-permite: ele mantém o histórico da `dev` na `main`, então a próxima
-promoção mostra só o que é novo, enquanto um squash deixaria a `main` com
-um histórico que a `dev` não compartilha. Ao fazer
-merge do próprio pull request, o mantenedor usa o bypass do ruleset para a
-revisão do code owner: o gate e o próprio pull request nunca são
+O mantenedor faz o merge; um agente nunca faz. Todo pull request, para a
+`dev` ou para a `main`, entra como merge commit, com o título do pull
+request: squash e rebase estão desligados, no repositório e nos rulesets.
+Os commits de um pull request ficam como foram escritos, e a `main` mantém
+o histórico da `dev`, então a próxima promoção mostra só o que é novo. Ao
+fazer merge do próprio pull request, o mantenedor usa o bypass do ruleset
+para a revisão do code owner: o gate e o próprio pull request nunca são
 contornados (`docs/repository-settings.md`).

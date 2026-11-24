@@ -1,5 +1,5 @@
-# The pull request title becomes the line in the release notes and, on a
-# squash merge, the commit subject on dev, so it has to be a Conventional
+# The pull request title becomes the line in the release notes and the
+# title of the merge commit on dev, so it has to be a Conventional
 # Commits title (CONTRIBUTING.md, "Commits and pull requests"). Its job,
 # `pr-title`, is a required status check on dev and main.
 #

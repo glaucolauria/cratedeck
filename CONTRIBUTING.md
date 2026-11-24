@@ -65,9 +65,9 @@ approve it; that is a security setting, not a judgement of your change.
 ## Review and merge
 
 A maintainer reviews every pull request; the code owner's approval and a
-green gate are required to merge. A pull request into `dev` may be merged
-with a merge commit or squashed into one commit titled after the pull
-request.
+green gate are required to merge. A pull request is merged with a merge
+commit titled after it, so your commits stay as you wrote them: make each
+one a meaningful step.
 
 Changes to `.github/`, `.claude/`, `.agents/`, the `Makefile` or
 `tests/harness/` run in CI or on the maintainers' machines, so they get a

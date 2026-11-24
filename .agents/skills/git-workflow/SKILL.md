@@ -128,7 +128,7 @@ not exit codes: `gh pr view <n> --json closingIssuesReferences,labels,assignees`
 ## Pull requests
 
 - **Title** in Conventional Commits form, English: it is the line in the
-  release notes and, on a squash merge, the commit on `dev`. The
+  release notes and the title of the merge commit on `dev`. The
   `pr-title` check enforces it.
 - **Closing issues:** one closing word per issue, `Closes #12, closes #15`;
   confirm with `closingIssuesReferences` after opening.
@@ -162,12 +162,11 @@ Only when the maintainer asks for it: one pull request from `dev` into
 
 ## Merging
 
-The maintainer merges; an agent never does. Into `dev`, a maintainer's
-sprint pull request merges as a merge commit; a contributor's may be
-squashed, with the title as the commit subject. Into `main`, the promotion
-merges as a merge commit, the only method its ruleset allows: it keeps
-`dev`'s history in `main`, so the next promotion shows only what is new,
-where a squash would leave `main` with a history `dev` does not share. Merging their own pull
-request, the maintainer uses the ruleset's bypass for the code-owner
-review: the gate and the pull request itself are never bypassed
-(`docs/repository-settings.md`).
+The maintainer merges; an agent never does. Every pull request, into
+`dev` or `main`, merges as a merge commit, titled after the pull request:
+squash and rebase are off, in the repository and in the rulesets. The
+commits of a pull request stay as they were written, and `main` keeps
+`dev`'s history, so the next promotion shows only what is new. Merging
+their own pull request, the maintainer uses the ruleset's bypass for the
+code-owner review: the gate and the pull request itself are never
+bypassed (`docs/repository-settings.md`).

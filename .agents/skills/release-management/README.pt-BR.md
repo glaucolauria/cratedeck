@@ -68,6 +68,6 @@ release sem nenhum erro visível, a menos que alguém vá olhar.
 - A release roda em `push`, não em `pull_request: closed`: um pull request
   de fork que entrou ainda roda com um token somente leitura e não
   conseguiria criar a tag.
-- Uma promoção entra como merge commit, nunca com squash nem rebase (o
-  ruleset da `main` não permite outra coisa): a `main` mantém o histórico
-  da `dev`, então a próxima promoção leva só o que é novo.
+- Todo merge é um merge commit, nunca squash nem rebase (os rulesets não
+  permitem outra coisa): a `main` mantém o histórico da `dev`, então a
+  próxima promoção leva só o que é novo.

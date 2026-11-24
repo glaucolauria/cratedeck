@@ -68,9 +68,9 @@ mudança.
 ## Revisão e merge
 
 Um mantenedor revisa todo pull request; a aprovação do code owner e um gate
-verde são exigidos para o merge. Um pull request para a `dev` pode entrar
-com um merge commit ou com squash em um único commit com o título do pull
-request.
+verde são exigidos para o merge. Um pull request entra com um merge commit
+com o título dele, então os seus commits ficam como você os escreveu: faça
+de cada um um passo com sentido.
 
 Mudanças em `.github/`, `.claude/`, `.agents/`, no `Makefile` ou em
 `tests/harness/` rodam no CI ou nas máquinas dos mantenedores, então recebem

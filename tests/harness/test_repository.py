@@ -247,6 +247,16 @@ def test_every_stage_requires_the_gate():
     assert gated == set(STAGES)
 
 
+def test_every_merge_is_a_merge_commit():
+    # No squash, no rebase: a pull request keeps its commits, and main
+    # keeps dev's history, so a promotion shows only what is new.
+    for ruleset in branch_rulesets():
+        for rule in ruleset["rules"]:
+            if rule["type"] == "pull_request":
+                methods = rule["parameters"]["allowed_merge_methods"]
+                assert methods == ["merge"], (ruleset["name"], methods)
+
+
 def test_the_push_guard_protects_every_stage():
     # The hook refuses locally what the rulesets refuse on the server.
     branches = {b for r in branch_rulesets() for b in protected_branches(r)}

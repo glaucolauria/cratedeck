@@ -18,10 +18,9 @@ reproduzem o estado. Aplicado em 2026-11-24.
 | Branch padrão | `dev` | todo pull request entra ali; o Dependabot e as palavras de fechamento (`Closes #12`) agem na branch padrão |
 | Issues, Discussions | ativados | issues para o trabalho, Discussions para perguntas e ideias |
 | Wiki, Projects | desativados | a documentação fica no repositório, o trabalho nas issues |
-| Merge commits | ativado | o pull request de sprint de um mantenedor mantém os commits das tarefas |
-| Squash merging | ativado | o pull request de um contribuidor vira um commit com o título dele |
-| Rebase merging | desativado | |
-| Título do commit no merge e no squash | o título do pull request | a `dev` e a `main` se leem como as release notes |
+| Merge commits | ativado | o único método: um pull request mantém os seus commits, e a `main` mantém o histórico da `dev` |
+| Squash merging, rebase merging | desativados | |
+| Título do merge commit | o título do pull request | a `dev` e a `main` se leem como as release notes |
 | Delete head branches | ativado | uma branch morre com o seu pull request |
 | Auto-merge | desativado | um mantenedor faz o merge, à mão |
 | Suggest updating branches | ativado | |
@@ -32,8 +31,7 @@ gh api -X POST $R/git/refs -f ref=refs/heads/dev \
   -f sha="$(gh api $R/git/ref/heads/main --jq .object.sha)"
 gh api -X PATCH $R -f default_branch=dev \
   -F has_wiki=false -F has_projects=false -F has_discussions=true -F has_issues=true \
-  -F allow_merge_commit=true -F allow_squash_merge=true -F allow_rebase_merge=false \
-  -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=COMMIT_MESSAGES \
+  -F allow_merge_commit=true -F allow_squash_merge=false -F allow_rebase_merge=false \
   -f merge_commit_title=PR_TITLE -f merge_commit_message=PR_BODY \
   -F delete_branch_on_merge=true -F allow_auto_merge=false -F allow_update_branch=true
 gh api -X PUT $R/topics -f 'names[]=cratedb' -f 'names[]=admin-ui' \
@@ -50,8 +48,8 @@ request.
 
 | Ruleset | Alvo | Regras | Bypass |
 | --- | --- | --- | --- |
-| `dev` | `refs/heads/dev` | sem exclusão, sem force push; um pull request é obrigatório (merge ou squash); `check` e `pr-title` precisam passar, vindos do GitHub Actions | **ninguém** |
-| `main` | `refs/heads/main` | o mesmo, só merge commits, e o `promotion` também precisa passar | **ninguém** |
+| `dev` | `refs/heads/dev` | sem exclusão, sem force push; um pull request é obrigatório (só merge commit); `check` e `pr-title` precisam passar, vindos do GitHub Actions | **ninguém** |
+| `main` | `refs/heads/main` | o mesmo, e o `promotion` também precisa passar | **ninguém** |
 | `code-owner-review` | `dev` e `main` | uma aprovação, de um code owner; aprovações desatualizadas descartadas; o último push aprovado por alguém que não o seu autor; conversas resolvidas | admin do repositório, **só para pull requests** |
 | `release-tags` | tags `v*` | sem exclusão, sem atualização, sem force push (a criação é permitida) | **ninguém**; numa emergência o ruleset é desativado, o que o log de auditoria registra |
 
@@ -63,9 +61,7 @@ request.
 - A `main` recebe só a promoção da `dev`. O `promotion` (`promotion.yml`)
   reprova um pull request para a `main` vindo de qualquer outra origem, e
   roda de novo quando a base de um pull request é trocada, para que um
-  resultado verde de uma execução contra a `dev` não seja aproveitado. Só
-  merge commits, então a `main` mantém o histórico da `dev` e a próxima
-  promoção mostra só o que é novo.
+  resultado verde de uma execução contra a `dev` não seja aproveitado.
 - O mantenedor não pode aprovar o próprio pull request, então faz o merge
   pelo bypass do `code-owner-review`, que o botão de merge oferece
   explicitamente e os insights do ruleset registram. O ruleset `main`

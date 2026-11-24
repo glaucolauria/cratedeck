@@ -67,6 +67,6 @@ error anyone sees unless someone looks.
 - The release runs on `push`, not on `pull_request: closed`: a merged pull
   request from a fork still runs with a read-only token and could not
   create the tag.
-- A promotion merges as a merge commit, never squashed or rebased (the
-  `main` ruleset allows nothing else): `main` keeps `dev`'s history, so the
-  next promotion carries only what is new.
+- Every merge is a merge commit, never squashed or rebased (the rulesets
+  allow nothing else): `main` keeps `dev`'s history, so the next promotion
+  carries only what is new.

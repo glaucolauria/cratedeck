@@ -157,9 +157,8 @@ an issue of its own, opened by a maintainer.
   admin UIs.
 - **Apache-2.0**, for the code and for contributions to it
   (`CONTRIBUTING.md`).
-- **Two stages, `dev` → `main`** (2026-11-24). Into `dev`: merge commits
-  for maintainers' sprint pull requests, squash allowed for a
-  contributor's. Into `main`: the promotion of `dev`, as a merge commit.
+- **Two stages, `dev` → `main`** (2026-11-24). Every pull request merges
+  as a merge commit, a contributor's included; no squash, no rebase.
 - **Dependency updates are automatic**: Dependabot security updates as
   soon as an advisory exists, version updates weekly and grouped, with a
   7-day cooldown. Keeping the project patched is a goal of its own.

@@ -168,9 +168,9 @@ uma delas é uma issue própria, aberta por um mantenedor.
   administração do CrateDB existentes.
 - **Apache-2.0**, para o código e para as contribuições a ele
   (`CONTRIBUTING.md`).
-- **Dois estágios, `dev` → `main`** (2026-11-24). Na `dev`: merge commits
-  para os pull requests de sprint dos mantenedores, squash permitido para o
-  de um contribuidor. Na `main`: a promoção da `dev`, com merge commit.
+- **Dois estágios, `dev` → `main`** (2026-11-24). Todo pull request entra
+  como merge commit, inclusive o de um contribuidor; sem squash, sem
+  rebase.
 - **As atualizações de dependências são automáticas**: atualizações de
   segurança do Dependabot assim que existe um advisory, atualizações de
   versão semanais e agrupadas, com cooldown de 7 dias. Manter o projeto com

@@ -17,10 +17,9 @@ file, and the commands below reproduce the state. Applied on 2026-11-24.
 | Default branch | `dev` | every pull request lands there; Dependabot and closing keywords (`Closes #12`) act on the default branch |
 | Issues, Discussions | on | issues for work, Discussions for questions and ideas |
 | Wiki, Projects | off | documentation lives in the repository, work in issues |
-| Merge commits | on | a maintainer's sprint pull request keeps its task commits |
-| Squash merging | on | a contributor's pull request becomes one commit titled after it |
-| Rebase merging | off | |
-| Commit title on merge and squash | the pull request title | `dev` and `main` read like the release notes |
+| Merge commits | on | the only method: a pull request keeps its commits, and `main` keeps `dev`'s history |
+| Squash merging, rebase merging | off | |
+| Merge commit title | the pull request title | `dev` and `main` read like the release notes |
 | Delete head branches | on | a branch dies with its pull request |
 | Auto-merge | off | a maintainer merges, by hand |
 | Suggest updating branches | on | |
@@ -31,8 +30,7 @@ gh api -X POST $R/git/refs -f ref=refs/heads/dev \
   -f sha="$(gh api $R/git/ref/heads/main --jq .object.sha)"
 gh api -X PATCH $R -f default_branch=dev \
   -F has_wiki=false -F has_projects=false -F has_discussions=true -F has_issues=true \
-  -F allow_merge_commit=true -F allow_squash_merge=true -F allow_rebase_merge=false \
-  -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=COMMIT_MESSAGES \
+  -F allow_merge_commit=true -F allow_squash_merge=false -F allow_rebase_merge=false \
   -f merge_commit_title=PR_TITLE -f merge_commit_message=PR_BODY \
   -F delete_branch_on_merge=true -F allow_auto_merge=false -F allow_update_branch=true
 gh api -X PUT $R/topics -f 'names[]=cratedb' -f 'names[]=admin-ui' \
@@ -48,8 +46,8 @@ nobody bypasses, and one that only the admin may bypass, for a pull request.
 
 | Ruleset | Target | Rules | Bypass |
 | --- | --- | --- | --- |
-| `dev` | `refs/heads/dev` | no deletion, no force push; a pull request is required (merge or squash); `check` and `pr-title` must pass, from GitHub Actions | **nobody** |
-| `main` | `refs/heads/main` | the same, merge commits only, and `promotion` must pass too | **nobody** |
+| `dev` | `refs/heads/dev` | no deletion, no force push; a pull request is required (merge commit only); `check` and `pr-title` must pass, from GitHub Actions | **nobody** |
+| `main` | `refs/heads/main` | the same, and `promotion` must pass too | **nobody** |
 | `code-owner-review` | `dev` and `main` | one approval, from a code owner; stale approvals dismissed; the last push approved by someone other than its author; conversations resolved | repository admin, **for pull requests only** |
 | `release-tags` | tags `v*` | no deletion, no update, no force push (creation is allowed) | **nobody**; in an emergency the ruleset is disabled, which the audit log records |
 
@@ -61,8 +59,7 @@ nobody bypasses, and one that only the admin may bypass, for a pull request.
 - `main` receives only the promotion of `dev`. `promotion` (`promotion.yml`)
   fails a pull request into `main` from any other head, and runs again
   when a pull request's base is changed, so a green result from a run
-  against `dev` cannot carry over. Merge commits only, so `main` keeps
-  `dev`'s history and the next promotion shows only what is new.
+  against `dev` cannot carry over.
 - The maintainer cannot approve their own pull request, so they merge it
   through the `code-owner-review` bypass, which the merge button offers
   explicitly and the ruleset's insights record. The `main` ruleset still
