@@ -1,0 +1,37 @@
+# Tool caches and reports, all under .cache/ (pytest, semgrep and, once the
+# app lands, the formatter, linter, bundler and coverage).
+.cache/
+coverage/
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+
+# Local overrides and anything that may hold a credential. Nothing here is
+# ever committed: see SECURITY.md.
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs
+*.log
+npm-debug.log*
+
+# A developer's own Claude Code settings (permissions they allowed, plugins
+# installed with --scope local). The shared ones are .claude/settings.json.
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

@@ -1,0 +1,8 @@
+# Normalize line endings: contributors on Windows get LF in the repository
+# whatever their editor writes, and shell scripts and hooks keep running.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
