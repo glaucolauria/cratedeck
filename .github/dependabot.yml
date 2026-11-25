@@ -1,0 +1,30 @@
+# Dependency updates. Security updates (Dependabot alerts with a fix) open
+# their pull requests as soon as an advisory is published; the cooldown
+# below applies to version updates only. Version updates come once a week,
+# grouped, so the noise is one pull request per ecosystem.
+#
+# The 7-day cooldown is the window in which a compromised or yanked release
+# is most likely to be caught upstream (SECURITY.md, "Controls in place").
+# Add the app's ecosystem (npm, ...) here in the pull request that adds its
+# lockfile.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - github_actions
+    commit-message:
+      prefix: ci
+      include: scope
+    open-pull-requests-limit: 5

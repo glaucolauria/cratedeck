@@ -1,0 +1,53 @@
+name: "\U0001F41B Bug report"
+description: Something in cratedeck that does not do what it says
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Write in English or Portuguese.
+        **Never paste credentials, hostnames or data from a real cluster**:
+        reduce the case to a table you can share. A vulnerability goes
+        through [a private report](https://github.com/glaucolauria/cratedeck/security/advisories/new),
+        not an issue.
+  - type: input
+    id: cratedeck-version
+    attributes:
+      label: cratedeck version
+      description: The release, or the commit if you built from source.
+    validations:
+      required: true
+  - type: input
+    id: cratedb-version
+    attributes:
+      label: CrateDB version
+      description: "`SELECT version['number'] FROM sys.nodes LIMIT 1`"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and how cratedeck runs
+      description: "For example: Firefox 140, container image, behind a reverse proxy."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The clicks or the SQL, in order, from a fresh page.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The message, a screenshot, the browser console output.
+    validations:
+      required: true

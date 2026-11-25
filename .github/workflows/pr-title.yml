@@ -1,0 +1,41 @@
+# The pull request title becomes the line in the release notes and the
+# title of the merge commit on dev, so it has to be a Conventional
+# Commits title (CONTRIBUTING.md, "Commits and pull requests"). Its job,
+# `pr-title`, is a required status check on dev and main.
+#
+# A workflow of its own because it must re-run when the title is edited,
+# which should not re-run the whole gate.
+name: pr-title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches: [dev, main]
+
+permissions: {}
+
+# Only the newest title matters.
+concurrency:
+  group: pr-title-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: pr-title
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 2
+    steps:
+      # The title is the contributor's to choose: it reaches the shell
+      # through the environment, quoted, never through `${{ }}` in the
+      # script.
+      - name: Conventional Commits title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|chore|refactor|docs|test|ci|build|perf|revert)(\([a-z0-9._/-]+\))?!?: [^ ].{2,}$'
+          if printf '%s' "$TITLE" | grep -Eq "$pattern"; then
+            echo "ok: $TITLE"
+          else
+            echo "::error title=Pull request title::Use a Conventional Commits title, for example 'feat(console): add query history'. Types: feat, fix, chore, refactor, docs, test, ci, build, perf, revert."
+            exit 1
+          fi

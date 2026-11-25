@@ -1,0 +1,38 @@
+name: "✨ Feature request"
+description: Something cratedeck should do
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in English or Portuguese. An open-ended idea fits
+        [Discussions](https://github.com/glaucolauria/cratedeck/discussions)
+        better; an issue is for work someone could pick up.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do with your CrateDB cluster, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What cratedeck would show or do. A sketch or the SQL behind it helps.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we know it is done. `make ci` green is implied.
+      value: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other tools or workarounds, and why they fall short.

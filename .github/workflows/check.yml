@@ -1,0 +1,111 @@
+# The gate a pull request has to pass.
+#
+# `gate` runs the targets of `make ci` on both architectures, amd64 and
+# arm64: hosted runners cost nothing for a public repository, and a
+# dependency or a native binary missing for one of them fails here instead
+# of on a user's machine. Once the app lands, its build runs in the same
+# matrix. The steps are the targets of `make ci`, one per step and in the
+# Makefile's order, so the pipeline and a developer's terminal cannot drift
+# into checking different things. Add or remove a step together with the
+# `ci:` line.
+#
+# `check` is the required status check on dev and main
+# (docs/repository-settings.md). It passes only when every leg of `gate`
+# passed, so a leg can be added or renamed without touching the rulesets.
+# Renaming `check` itself blocks every pull request until the rulesets move
+# with it. That only dev reaches main is promotion.yml's job.
+#
+# Pull requests from forks run here too, with a read-only token and no
+# secrets: nothing in this workflow needs either.
+name: check
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+# A new commit makes the previous run's answer irrelevant.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: gate (${{ matrix.runner }})
+    strategy:
+      # Every leg reports, so one run shows a failure on both architectures
+      # or on only one, which is the information.
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    # About twice a green run, so a runner that hangs costs little.
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Every tool runs through uvx at the exact version the Makefile pins.
+      # No lockfile of uv's own here, so no uv cache either.
+      - name: Install uv
+        id: install
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.8"
+          enable-cache: false
+
+      # The targets of `make ci`, one per step. Each runs whenever the tools
+      # installed, even after an earlier one failed: one run reports every
+      # failure, instead of one push per failure.
+      - name: Tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: make test
+
+      - name: semgrep
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: make security
+
+      - name: Workflows (zizmor)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          # Read-only; lets zizmor run its online audits (known-vulnerable
+          # and impostor action references).
+          GH_TOKEN: ${{ github.token }}
+        run: make workflows
+
+  check:
+    name: check
+    needs: [gate]
+    # Always, including after a failed or cancelled leg: a skipped required
+    # job counts as passed, so this job must run and fail instead.
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+
+    steps:
+      # Not a `make` target: it compares the pull request's dependency
+      # changes against the GitHub Advisory Database, which only exists
+      # here, and is the same on every architecture. A new dependency, in
+      # any scope, with a known moderate-or-worse advisory fails the gate,
+      # and so does one whose license is not on this allowlist: a license
+      # nobody listed is a question for the pull request, not a default.
+      - name: Dependency review
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: moderate
+          fail-on-scopes: runtime, development, unknown
+          allow-licenses: Apache-2.0, MIT, MIT-0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Zlib, CC0-1.0, CC-BY-4.0, Unlicense, BlueOak-1.0.0, Python-2.0, MPL-2.0
+
+      - name: Every gate leg passed
+        if: ${{ always() }}
+        env:
+          RESULT: ${{ needs.gate.result }}
+        run: |
+          if [ "$RESULT" != "success" ]; then
+            echo "::error::gate finished as '$RESULT' on at least one architecture: read the failed leg above."
+            exit 1
+          fi

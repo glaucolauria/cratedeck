@@ -1,0 +1,107 @@
+# Tags and releases main when its version is new: `version` from
+# package.json, or `project.version` from pyproject.toml. A merge that did
+# not bump the version releases nothing -- documentation, CI and harness
+# changes are not releases (the `release-management` skill). The notes are
+# generated from the merged pull requests, classified by
+# .github/release.yml; nobody writes them. A software bill of materials
+# (CycloneDX) of what the release ships is attached to it.
+#
+# On `push`, not on `pull_request: closed`: a pull request from a fork runs
+# with a read-only token even once merged, and could not push the tag. A
+# push to main is always the merged promotion of dev (the rulesets and
+# promotion.yml allow nothing else), and runs with this repository's token.
+#
+# Until the app has a package.json, there is no version and this workflow
+# says so and stops.
+name: create-release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Two merges in a row: the second waits, and never cancels a release midway.
+concurrency:
+  group: create-release
+  cancel-in-progress: false
+
+jobs:
+  create-release:
+    name: create-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the tag and the release (gh release create)
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history and tags: the "already released?" check below runs
+          # against the tags known locally, and a shallow checkout fetches
+          # none.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The runner's own python3. The version reaches a shell below and the
+      # file is editable in any pull request, so it is validated here
+      # rather than trusted: anything but a plain dotted version fails.
+      - name: Read the version
+        id: version
+        run: |
+          python3 -B -c "import json, pathlib, re, sys, tomllib
+          if pathlib.Path('package.json').exists():
+              version = json.loads(pathlib.Path('package.json').read_text())['version']
+          elif pathlib.Path('pyproject.toml').exists():
+              with open('pyproject.toml', 'rb') as f:
+                  version = tomllib.load(f)['project']['version']
+          else:
+              print('VERSION=')
+              sys.exit(0)
+          version = str(version)
+          if not re.fullmatch(r'[0-9]+(\.[0-9]+){2}(-[0-9A-Za-z.-]+)?', version):
+              sys.exit(f'refusing unexpected version string: {version!r}')
+          print(f'VERSION={version}')" >> "$GITHUB_OUTPUT"
+
+      - name: Decide
+        id: decide
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          if [ -z "$VERSION" ]; then
+            echo "::notice::No package.json or pyproject.toml yet: nothing to release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::notice::v$VERSION is already released; this merge did not bump the version."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Written before anything is tagged, so a failure here leaves no tag
+      # behind. When an advisory names a package, the releases that ship it
+      # are a search away.
+      # Releases are immutable once published, so a release without its
+      # SBOM could never get one: no lockfile to build it from, no release.
+      - name: Write the SBOM
+        if: steps.decide.outputs.release == 'true'
+        run: |
+          if [ -f package-lock.json ]; then
+            npm sbom --package-lock-only --omit dev \
+              --sbom-format cyclonedx > sbom.cdx.json
+          else
+            echo "::error::No lockfile to build the SBOM from; a release ships with one (SECURITY.md)."
+            exit 1
+          fi
+
+      - name: Tag and release
+        if: steps.decide.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.decide.outputs.tag }}
+        run: |
+          set -- "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          case "$TAG" in *-*) set -- "$@" --prerelease ;; esac
+          gh release create "$@" sbom.cdx.json
