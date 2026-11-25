@@ -390,6 +390,49 @@ def git(*args: str) -> str:
     return result.stdout if result.returncode == 0 else ""
 
 
+def published_text(path: Path) -> str:
+    """What git publishes for a path besides its name.
+
+    A link's target, never the file it points to, which may be anywhere;
+    a file's bytes, read as UTF-8 so that a name in a binary file's
+    metadata is found too.
+    """
+    if path.is_symlink():
+        return os.readlink(path)
+    if path.is_file():
+        return path.read_bytes().decode("utf-8", errors="replace")
+    return ""
+
+
+def outgoing_history(root: Path = ROOT) -> str:
+    """Everything a push of HEAD publishes that no remote has yet.
+
+    Each commit's author, committer and message, and its patch: paths and
+    contents, a line added in one commit and removed in the next included,
+    and what a merge changes on its own.
+    """
+    return subprocess.run(
+        [
+            "git",
+            "log",
+            "-p",
+            "--cc",
+            "--text",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--format=%an%n%ae%n%cn%n%ce%n%B",
+            "HEAD",
+            "--not",
+            "--remotes",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=True,
+    ).stdout
+
+
 def repository_files() -> list[Path]:
     """Tracked files, and new ones git does not ignore."""
     listed = git("ls-files", "--cached", "--others", "--exclude-standard")
@@ -421,25 +464,65 @@ def test_the_names_file_ignores_comments_and_blanks(tmp_path, monkeypatch):
     assert private_names() == {"acme", "initech"}
 
 
+def test_a_link_is_read_as_git_stores_it(tmp_path):
+    outside = tmp_path / "outside.txt"
+    outside.write_text("Built at Acme.\n", encoding="utf-8")
+    link = tmp_path / "link"
+    link.symlink_to(outside)
+    # The target's path, not the contents of the file it points to.
+    assert published_text(link) == str(outside)
+    assert published_text(outside) == "Built at Acme.\n"
+    assert published_text(tmp_path / "missing") == ""
+
+
+def test_the_outgoing_history_keeps_what_a_later_commit_removed(tmp_path):
+    def run(*args: str) -> None:
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+    run("init", "-q")
+    (tmp_path / "notes.md").write_text("Built at Acme.\n", encoding="utf-8")
+    (tmp_path / "initech.txt").write_text("x\n", encoding="utf-8")
+    run("add", ".")
+    run("commit", "-q", "-m", "add notes")
+    run("rm", "-q", "notes.md", "initech.txt")
+    run("commit", "-q", "-m", "remove notes")
+    # The tree is empty and the messages are clean, but a push publishes
+    # the first commit's path and contents.
+    made_up = frozenset({"acme", "initech"})
+    assert private_words(outgoing_history(tmp_path), made_up) == made_up
+
+
+# A failure says neither the word nor where it is: the gate's output may be
+# read in an agent session or pasted anywhere. `pytrace=False` keeps
+# pytest's own report (source lines, compared values) out of it too.
+FOUND_IN_FILES = (
+    "A file's path or contents holds a word from the private-names list. "
+    "Neither is printed here: look for it outside any agent session, with "
+    "`git grep -i -w -F -f <list>` and `git ls-files | grep -i -w -F -f "
+    "<list>`."
+)
+FOUND_IN_COMMITS = (
+    "An unpushed commit holds a word from the private-names list, in its "
+    "author, committer, message, paths or contents. Neither is printed "
+    "here: look for it outside any agent session, with `git log -p --not "
+    "--remotes | grep -i -w -F -f <list>`, and rewrite the commit before "
+    "pushing."
+)
+
+
 def test_no_private_names_in_the_files(names):
-    found = []
     for path in repository_files():
-        if not path.is_file() or path.is_symlink():
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        if private_words(f"{path.relative_to(ROOT)}\n{text}", names):
-            found.append(str(path.relative_to(ROOT)))
-    # The words themselves are never printed.
-    assert not found, f"private names in: {found}"
+        name = str(path.relative_to(ROOT))
+        if private_words(f"{name}\n{published_text(path)}", names):
+            pytest.fail(FOUND_IN_FILES, pytrace=False)
 
 
 def test_no_private_names_in_the_commits(names):
-    # Author and committer names and e-mails, and messages, of every commit
-    # on this branch that is on no remote branch yet.
-    log = git(
-        "log", "--format=%an%n%ae%n%cn%n%ce%n%B", "HEAD", "--not", "--remotes"
-    )
-    assert not private_words(log, names), "a commit names a private name"
+    # Every commit on this branch that is on no remote branch yet.
+    if private_words(outgoing_history(), names):
+        pytest.fail(FOUND_IN_COMMITS, pytrace=False)

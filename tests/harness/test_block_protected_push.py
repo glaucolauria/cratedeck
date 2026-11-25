@@ -62,6 +62,12 @@ def denial(output: str) -> str:
         ("git push origin :main", "main"),
         ("git push --delete origin main", "main"),
         ("git push origin :dev", "dev"),
+        # Every branch both sides have, and wildcard destinations.
+        ("git push origin :", "every branch both sides have (:)"),
+        ("git push origin +:", "every branch both sides have (:)"),
+        ("git push origin 'refs/heads/*:refs/heads/*'", "dev, main, master"),
+        ("git push origin '+refs/*:refs/*'", "dev, main, master"),
+        ("git push origin 'refs/heads/ma*:refs/heads/ma*'", "main, master"),
         # Options before and between operands.
         ("git -C /repo push origin main", "main"),
         ("git push -o ci.skip origin main", "main"),
@@ -84,6 +90,19 @@ def denial(output: str) -> str:
         ("cd x&&git push origin main", "main"),
         ("git status\ngit push origin main", "main"),
         ("git push \\\n  origin main", "main"),
+        ("git pu\\\nsh origin main", "main"),
+        # Operators touching a parenthesis: shlex returns `);` as one token.
+        ("(true);git push origin main", "main"),
+        ("(true)&&git push origin dev", "dev"),
+        ("$(true)||git push origin main", "main"),
+        # A comment ends at its line; a `#` inside a word is no comment.
+        ("# inspect\ngit push origin main", "main"),
+        ("git status # inspect\ngit push origin main", "main"),
+        ("echo a#b; git push origin main", "main"),
+        # An unbalanced quote in a heredoc does not hide the lines after it.
+        ("cat <<EOF\ndon't\nEOF\ngit push origin main", "main"),
+        # Quotes spliced into a word.
+        ('git pu""sh origin main', "main"),
         # Prefixes.
         ("FOO=1 git push origin main", "main"),
         ("GIT_SSH_COMMAND=x git push origin main", "main"),
@@ -98,6 +117,9 @@ def denial(output: str) -> str:
         ("{ git push origin main; }", "main"),
         ("echo $(git push origin main)", "main"),
         ("echo `git push origin main`", "main"),
+        # A substitution runs inside double quotes too.
+        ('echo "$(git push origin main)"', "main"),
+        ('echo "`git push origin main`"', "main"),
         ("if true; then git push origin main; fi", "main"),
         ("for b in x; do git push origin main; done", "main"),
         # Wrappers.
@@ -105,6 +127,29 @@ def denial(output: str) -> str:
         ("bash -lc 'cd x && git push origin master'", "master"),
         ("sh -c 'cd x && git push origin main'", "main"),
         ('eval "git push origin main"', "main"),
+        # eval joins its words into one line; xargs runs the rest with its
+        # input appended, which the guard cannot read.
+        ("eval git push origin main", "main"),
+        ("eval 'git push' origin main", "main"),
+        ("xargs -n1 sh -c 'git push origin main'", "main"),
+        (
+            "xargs git push origin main",
+            "an unexpanded destination ($XARGS_INPUT), main",
+        ),
+        (
+            "echo main | xargs git push origin",
+            "an unexpanded destination ($XARGS_INPUT)",
+        ),
+        (
+            "xargs -n 1 git push origin",
+            "an unexpanded destination ($XARGS_INPUT)",
+        ),
+        (
+            "xargs -I {} git push origin {}",
+            "an unexpanded destination ($XARGS_INPUT)",
+        ),
+        ("xargs git push", "whatever $XARGS_INPUT expands to"),
+        ("git push $REMOTE", "whatever $REMOTE expands to"),
     ],
 )
 def test_a_push_to_a_stage_branch_is_denied(monkeypatch, command, names):
@@ -155,11 +200,13 @@ def test_a_detached_head_or_unknown_branch_is_not_protected(monkeypatch):
         "git push origin main:feature",
         "git push origin dev:sprint/x",
         "git push origin origin/main:refs/heads/sprint/x",
+        "git push origin 'refs/heads/feat/*:refs/heads/feat/*'",
         # Tags are not branches.
         "git push origin refs/tags/main",
         "git push origin v1.2.3",
         "git push --tags",
         "git push origin --tags",
+        "git push origin 'refs/tags/*:refs/tags/*'",
         # Not a push.
         "git log --oneline main",
         "echo push main",
@@ -167,6 +214,10 @@ def test_a_detached_head_or_unknown_branch_is_not_protected(monkeypatch):
         'git commit -m "then git push origin main"',
         "gh pr create --base main",
         "legit push origin main",
+        "echo 'eval git push origin main'",
+        # Comments.
+        "# git push origin main",
+        "git status # then git push origin main",
     ],
 )
 def test_a_push_elsewhere_passes(monkeypatch, command):
@@ -182,6 +233,10 @@ def test_a_push_elsewhere_passes(monkeypatch, command):
         "./scripts/release.sh",
         # A prefix flag that takes a word is read as the command.
         "sudo -u bob git push origin main",
+        # Another repository's branch, named by --git-dir or GIT_DIR, is
+        # not where the current branch is read.
+        "git --git-dir=other/.git push",
+        "GIT_DIR=other/.git git push",
     ],
 )
 def test_known_limits_pass_and_are_documented(monkeypatch, command):
@@ -203,9 +258,18 @@ def test_unparseable_stdin_is_ignored(monkeypatch):
     assert hook.main() == 0
 
 
-def test_an_unbalanced_quote_does_not_crash(monkeypatch):
-    assert shell_words.tokens_of('git push "origin main') == []
-    assert decide(monkeypatch, bash('git push "origin main')) == ""
+def test_an_unbalanced_quote_is_read_as_a_plain_character(monkeypatch):
+    # Bash would refuse the line; reading on costs nothing, and stopping
+    # would hide every line after a stray quote in a heredoc.
+    assert shell_words.tokens_of('git push "origin main') == [
+        "git",
+        "push",
+        '"origin',
+        "main",
+    ]
+    assert "write to main," in denial(
+        decide(monkeypatch, bash('git push "origin main'))
+    )
 
 
 def wrapped(times: int) -> str:

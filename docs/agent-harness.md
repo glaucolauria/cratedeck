@@ -48,16 +48,21 @@ link: enable `core.symlinks` (and Developer Mode), or point the tool at
 
 `.claude/hooks/block_protected_push.py`, a `PreToolUse` hook on Bash:
 it denies a `git push` whose destination is `dev`, `main` or `master`, wherever
-the push sits on the command line (after `;` or `&&`, on a later line,
-behind `FOO=1` or `sudo`, inside `sh -c`), with `HEAD` and a bare push
-resolved to the current branch, and `--all` and `--mirror` refused. A
-destination it cannot read (`$BRANCH`) is refused rather than guessed.
+the push sits on the command line (after `;` or `&&`, on a later line or
+after a comment, behind `FOO=1` or `sudo`, inside `$( )` even in quotes,
+inside `sh -c`, `eval` or `xargs`), with `HEAD` and a bare push resolved
+to the current branch, a wildcard destination (`refs/heads/*`) matched
+against the stage branches, and `:`, `--all` and `--mirror` refused. A
+destination it cannot read (`$BRANCH`, or what `xargs` adds from its
+input) is refused rather than guessed.
 
 - It needs only the system `python3` (3.9+), standard library only, and
   never fails the command it observes.
 - It is a guardrail, not a boundary: it does not expand git aliases
-  (`git -c alias.p=push p`), read scripts, or see a ref moved through the
-  API. The rulesets are the boundary.
+  (`git -c alias.p=push p`), read scripts, read the branch of another
+  repository named by `--git-dir` or `GIT_DIR`, read push configuration
+  (`remote.<name>.push`), or see a ref moved through the API. The rulesets
+  are the boundary.
 - `tests/harness/test_block_protected_push.py` names every command form it
   must deny and every one it must let through, including these limits.
 

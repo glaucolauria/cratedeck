@@ -2,26 +2,29 @@
 """Deny a `git push` whose destination is a protected branch.
 
 Every change reaches the stage branches, `dev` and then `main`, through a
-pull request (AGENTS.md, "Stage flow"; the `git-workflow` skill). The repository's rulesets enforce that
-server-side (docs/repository-settings.md). This hook refuses the push before
-it leaves the machine, so the refusal is immediate and says what to do
-instead.
+pull request (AGENTS.md, "Stage flow"; the `git-workflow` skill). The
+repository's rulesets enforce that server-side
+(docs/repository-settings.md). This hook refuses the push before it leaves
+the machine, so the refusal is immediate and says what to do instead.
 
 It inspects the *destination* of each refspec rather than looking for a
 branch name anywhere in the command: `git push origin x:main` is blocked,
 `git push origin main:sprint/x` is not. `HEAD`, a bare `git push` and a
 remote-only push resolve to the current branch of the repository the
-command runs in -- the payload's `cwd`, or `git -C <dir>`. `--all` and
-`--mirror` write every branch, stage branches included, and are refused.
+command runs in -- the payload's `cwd`, or `git -C <dir>`. A wildcard
+destination (`refs/heads/*`) is matched against the protected branches;
+`:`, `--all` and `--mirror` write every branch both sides have, or every
+branch, and are refused.
 
-A destination it cannot read (`$BRANCH`) is refused rather than guessed:
-the cost is one retry with the branch spelled out. `--tags` alone pushes
-tags, not branches, and passes.
+A destination it cannot read (`$BRANCH`, or what `xargs` adds from its
+input) is refused rather than guessed: the cost is one retry with the
+branch spelled out. `--tags` alone pushes tags, not branches, and passes.
 
 A guardrail, not a security boundary. It does not see git aliases
-(`git -c alias.p=push p`), scripts, a `cd` earlier on the line, or a ref
-moved through the API (`gh api .../git/refs/heads/main`); the boundary is
-the rulesets.
+(`git -c alias.p=push p`), scripts, a `cd` earlier on the line, another
+repository named by `--git-dir` or `GIT_DIR`, push configuration
+(`remote.<name>.push`, `push.default=matching`), or a ref moved through the
+API (`gh api .../git/refs/heads/main`); the boundary is the rulesets.
 
 Reads a PreToolUse payload on stdin. Prints a deny decision on stdout when
 it should block, nothing otherwise. Python 3.9+, standard library only.
@@ -30,6 +33,7 @@ it should block, nothing otherwise. Python 3.9+, standard library only.
 from __future__ import annotations
 
 import json
+import re
 
 # Driving git is the whole point of this hook. Every call is list-form with
 # no shell=True, so nothing reaches a shell parser.
@@ -114,7 +118,7 @@ def current_branch(cwd: str | None) -> str:
     """Current branch, or an empty string when git cannot say."""
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],  # noqa: S607
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -127,12 +131,30 @@ def current_branch(cwd: str | None) -> str:
 
 
 def refspec_destination(token: str) -> str:
-    """Destination branch of a refspec, without `+` or `refs/heads/`."""
+    """The destination of a refspec, without the leading `+`."""
     spec = token.lstrip("+")
-    destination = spec.rsplit(":", 1)[-1] if ":" in spec else spec
-    for prefix in ("refs/heads/", "heads/"):
-        destination = destination.removeprefix(prefix)
-    return destination
+    return spec.rsplit(":", 1)[-1] if ":" in spec else spec
+
+
+def protected_matches(destination: str) -> list[str]:
+    """The protected branches a destination writes to.
+
+    `main`, `heads/main` and `refs/heads/main` are the same ref; a `*`
+    matches any run of characters, as it does in a refspec, so
+    `refs/heads/*` writes to all of them and `refs/tags/*` to none.
+    """
+    if destination.startswith("refs/"):
+        ref = destination
+    elif destination.startswith("heads/"):
+        ref = f"refs/{destination}"
+    else:
+        ref = f"refs/heads/{destination}"
+    pattern = re.escape(ref).replace(r"\*", ".*")
+    return sorted(
+        branch
+        for branch in PROTECTED
+        if re.fullmatch(pattern, f"refs/heads/{branch}")
+    )
 
 
 def protected_destinations(
@@ -164,19 +186,24 @@ def protected_destinations(
     # The first operand is the remote, unless `--repo` named it. With no
     # refspec, git pushes the current branch -- or, with `--tags`, only
     # the tags.
+    targets = []
     refspecs = operands if remote_given else operands[1:]
+    if not remote_given and operands and "$" in operands[0]:
+        # An unread remote may expand to refspecs as well.
+        targets.append(f"whatever {operands[0]} expands to")
     if not refspecs:
         refspecs = [] if tags_only else ["HEAD"]
-    targets = []
     for spec in refspecs:
+        if spec.lstrip("+") == ":":
+            targets.append("every branch both sides have (:)")
+            continue
         destination = refspec_destination(spec)
         if "$" in destination:
             targets.append(f"an unexpanded destination ({destination})")
             continue
         if destination in CURRENT:
             destination = current_branch(cwd)
-        if destination in PROTECTED:
-            targets.append(destination)
+        targets.extend(protected_matches(destination))
     return targets
 
 
@@ -213,10 +240,8 @@ def deny(targets: list[str]) -> None:
 
 def main() -> int:
     payload = read_payload()
-    command = command_of(payload)
-    if "push" not in command:
-        return 0
-    targets = blocked(command, cwd_of(payload))
+    # No shortcut on the text: `git pu""sh` is a push too.
+    targets = blocked(command_of(payload), cwd_of(payload))
     if targets:
         deny(targets)
     return 0

@@ -62,9 +62,11 @@ push.
    mantenedores, nem copie nada deles. A lista desses nomes fica na máquina
    de cada mantenedor, nunca aqui (`~/.config/cratedeck/private-names`, ou
    o arquivo para o qual `CRATEDECK_PRIVATE_NAMES` aponta); os testes
-   `test_no_private_names_*` verificam os arquivos e os commits ainda não
-   enviados contra ela, e são pulados sem ela. Rode `make ci` antes de todo
-   push: depois do push, é público. Nunca leia esse arquivo numa sessão.
+   `test_no_private_names_*` verificam os arquivos e tudo o que os commits
+   ainda não enviados levam (autores, mensagens, caminhos e conteúdos)
+   contra ela, sem nunca imprimir o que encontram, e são pulados sem ela.
+   Rode `make ci` antes de todo push: depois do push, é público. Nunca
+   leia esse arquivo numa sessão.
 2. Faça commits com um endereço `noreply` do GitHub, nunca com um e-mail de
    trabalho: `git config user.email <id>+<login>@users.noreply.github.com`
    no clone. Confira isso antes do primeiro commit.

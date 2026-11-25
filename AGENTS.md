@@ -53,9 +53,11 @@ requests and comments are all public, and stay public once pushed.
    copy anything from them. The list of those names lives on each
    maintainer's machine, never here (`~/.config/cratedeck/private-names`,
    or the file `CRATEDECK_PRIVATE_NAMES` points at); the
-   `test_no_private_names_*` tests check the files and the unpushed commits
-   against it, and skip without it. Run `make ci` before every push: once
-   pushed, it is public. Never read that file into a session.
+   `test_no_private_names_*` tests check the files and everything the
+   unpushed commits carry (authors, messages, paths and contents) against
+   it, never printing a match, and skip without it. Run `make ci` before
+   every push: once pushed, it is public. Never read that file into a
+   session.
 2. Commit with a GitHub `noreply` address, never a work e-mail:
    `git config user.email <id>+<login>@users.noreply.github.com` in the
    clone. Check it before the first commit.

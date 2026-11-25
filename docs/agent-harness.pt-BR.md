@@ -50,16 +50,21 @@ ou aponte a ferramenta diretamente para `.agents/skills/`.
 `.claude/hooks/block_protected_push.py`, um hook `PreToolUse` no Bash: ele
 nega um `git push` cujo destino seja `dev`, `main` ou `master`, onde quer que o
 push esteja na linha de comando (depois de `;` ou `&&`, em uma linha
-seguinte, atrás de `FOO=1` ou `sudo`, dentro de `sh -c`), com `HEAD` e um
-push sem argumentos resolvidos para a branch atual, e `--all` e `--mirror`
-recusados. Um destino que ele não consegue ler (`$BRANCH`) é recusado em
-vez de adivinhado.
+seguinte ou depois de um comentário, atrás de `FOO=1` ou `sudo`, dentro de
+`$( )` mesmo entre aspas, dentro de `sh -c`, `eval` ou `xargs`), com
+`HEAD` e um push sem argumentos resolvidos para a branch atual, um destino
+com curinga (`refs/heads/*`) comparado com as branches de estágio, e `:`,
+`--all` e `--mirror` recusados. Um destino que ele não consegue ler
+(`$BRANCH`, ou o que o `xargs` acrescenta da entrada) é recusado em vez de
+adivinhado.
 
 - Ele precisa apenas do `python3` do sistema (3.9+), só com a biblioteca
   padrão, e nunca faz falhar o comando que observa.
 - É uma salvaguarda, não uma barreira: não expande aliases do git
-  (`git -c alias.p=push p`), não lê scripts nem vê uma ref movida pela API.
-  Os rulesets são a barreira.
+  (`git -c alias.p=push p`), não lê scripts, não lê a branch de outro
+  repositório indicado por `--git-dir` ou `GIT_DIR`, não lê a configuração
+  de push (`remote.<name>.push`) nem vê uma ref movida pela API. Os
+  rulesets são a barreira.
 - `tests/harness/test_block_protected_push.py` nomeia cada forma de comando
   que ele precisa negar e cada uma que precisa deixar passar, incluindo
   esses limites.
